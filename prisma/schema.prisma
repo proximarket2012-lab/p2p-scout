@@ -1,0 +1,128 @@
+// P2P Arbitrage Scout — Prisma schema
+// CDC v1.0 — June 2026
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Platform {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  apiEndpoint String
+  feeMaker    Float    @default(0)
+  feeTaker    Float    @default(0)
+  fiatCount   Int      @default(0)
+  liquidity   Int      @default(3) // 1-5 stars
+  region      String   @default("Global")
+  color       String   @default("#1B2E5E")
+  logo        String   @default("")
+  escrow      Boolean  @default(true)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TradingPair {
+  id            String   @id @default(cuid())
+  symbol        String   @unique // USDT/XAF
+  type          String   @default("Stablecoin/Fiat")
+  justification String
+  risk          String   @default("LOW") // LOW, MEDIUM, HIGH
+  riskEmoji     String   @default("🟢")
+  region        String
+  baseAsset     String   @default("USDT")
+  quoteAsset    String
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model LlmModel {
+  id           String    @id @default(cuid())
+  name         String    @unique
+  provider     String
+  strengths    String
+  languageFit  String    // FR + EN, EN > FR, FR ★, etc.
+  costPer1k    Float     @default(0)
+  priority     Int       @default(1) // rotation order (1..10)
+  enabled      Boolean   @default(true)
+  lastUsedAt   DateTime?
+  useCount     Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Opportunity {
+  id                String    @id @default(cuid())
+  pair              String
+  fiat              String
+  region            String
+  buyPlatform       String
+  sellPlatform      String
+  buyPrice          Float
+  sellPrice         Float
+  spreadBrut        Float
+  feesTotal         Float
+  spreadNet         Float
+  buyMerchant       String
+  sellMerchant      String
+  buyMerchantRating Float     @default(95)
+  sellMerchantRating Float    @default(95)
+  buyTrades         Int       @default(500)
+  sellTrades        Int       @default(500)
+  volumeAvailable   Float     @default(500)
+  durationMin       Int       @default(20)
+  messageFr         String?
+  messageEn         String?
+  llmModel          String?
+  status            String    @default("ACTIVE") // ACTIVE, PUBLISHED, EXPIRED, SUSPICIOUS
+  detectedAt        DateTime  @default(now())
+  expiresAt         DateTime
+  publishedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([status])
+  @@index([pair])
+  @@index([detectedAt])
+}
+
+model Channel {
+  id              String   @id @default(cuid())
+  language        String   @unique // FR or EN
+  name            String
+  description     String   // Telegram limit: 255 chars (we enforce 150 for SEO)
+  hashtags        String
+  pinnedMessage   String?
+  botUsername     String   @default("@P2PScoutBot")
+  subscriberCount Int      @default(0)
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ScanLog {
+  id                 String   @id @default(cuid())
+  status             String   // SUCCESS, PARTIAL, FAILED
+  durationMs         Int      @default(0)
+  platformsChecked   Int      @default(0)
+  platformsFailed    Int      @default(0)
+  opportunitiesFound Int      @default(0)
+  opportunitiesPublished Int  @default(0)
+  error              String?
+  createdAt          DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
