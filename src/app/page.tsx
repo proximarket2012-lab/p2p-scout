@@ -109,6 +109,7 @@ export default function Home() {
         platforms={platforms.length}
         lastScanAgo={stats.lastScan ? timeAgo(stats.lastScan.createdAt) : "jamais"}
         scannerActive={stats.scannerActive}
+        publishedCount={stats.opportunities.published}
         onScan={handleScan}
         scanning={scanning}
       />
@@ -132,7 +133,8 @@ export default function Home() {
             <div className="rounded-xl bg-[#00C48C]/5 border border-[#00C48C]/30 p-3 flex items-center gap-3">
               <CheckCircle2 className="h-4 w-4 text-[#00C48C] shrink-0" />
               <p className="text-xs text-white/70">
-                <strong className="text-[#00C48C]">{stats.opportunities.active} opportunité{stats.opportunities.active !== 1 ? "s" : ""} active{stats.opportunities.active !== 1 ? "s" : ""}</strong> détectée{stats.opportunities.active !== 1 ? "s" : ""} ·
+                <strong className="text-[#00C48C]">{stats.opportunities.active} opportunité{stats.opportunities.active !== 1 ? "s" : ""} active{stats.opportunities.active !== 1 ? "s" : ""}</strong>{" · "}
+                <strong className="text-[#00B5A3]">{stats.opportunities.published} auto-publiée{stats.opportunities.published !== 1 ? "s" : ""}</strong> sur Telegram FR+EN{" · "}
                 Meilleur spread net: <strong className="text-[#00B5A3]">+{stats.bestSpread.toFixed(2)}%</strong>
               </p>
             </div>

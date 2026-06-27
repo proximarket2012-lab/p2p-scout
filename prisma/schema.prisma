@@ -126,3 +126,13 @@ model SystemSetting {
   key   String @unique
   value String
 }
+
+// Distributed lock for idempotent scans (Vercel Hobby + Neon Postgres hack).
+// Prevents concurrent scans when multiple external crons fire simultaneously.
+// Works on both SQLite (dev) and Postgres (Neon prod).
+model ScanLock {
+  id          String   @id @default("global")
+  acquiredAt  DateTime @default(now())
+  expiresAt   DateTime
+  workerId    String?
+}

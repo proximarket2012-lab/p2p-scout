@@ -54,9 +54,8 @@ export function Explorer({ opportunities, stats, onSelect }: ExplorerProps) {
 
   const statusOptions: { value: StatusFilter; label: string; color: string; count: number }[] = [
     { value: "ACTIVE", label: "Actives", color: "#00C48C", count: stats?.opportunities.active ?? 0 },
-    { value: "PUBLISHED", label: "Publiées", color: "#00B5A3", count: stats?.opportunities.published ?? 0 },
-    { value: "EXPIRED", label: "Expirées", color: "#6b7280", count: stats?.opportunities.expired ?? 0 },
     { value: "ALL", label: "Toutes", color: "#6C3FC7", count: stats?.opportunities.total ?? 0 },
+    { value: "EXPIRED", label: "Expirées", color: "#6b7280", count: stats?.opportunities.expired ?? 0 },
   ];
 
   return (

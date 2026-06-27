@@ -9,11 +9,12 @@ interface HeroProps {
   platforms: number;
   lastScanAgo: string;
   scannerActive: boolean;
+  publishedCount: number;
   onScan: () => void;
   scanning: boolean;
 }
 
-export function Hero({ activeCount, bestSpread, platforms, lastScanAgo, scannerActive, onScan, scanning }: HeroProps) {
+export function Hero({ activeCount, bestSpread, platforms, lastScanAgo, scannerActive, publishedCount, onScan, scanning }: HeroProps) {
   return (
     <header className="relative overflow-hidden bg-radial-glow">
       <div className="absolute inset-0 bg-grid opacity-40" aria-hidden />
@@ -102,8 +103,8 @@ export function Hero({ activeCount, bestSpread, platforms, lastScanAgo, scannerA
         >
           <StatCard label="Opportunités actives" value={activeCount.toString()} color="#00C48C" emoji="🟢" />
           <StatCard label="Meilleur spread net" value={`+${bestSpread.toFixed(2)}%`} color="#00B5A3" emoji="📈" />
-          <StatCard label="Plateformes surveillées" value={platforms.toString()} color="#6C3FC7" emoji="🏦" />
-          <StatCard label="LLMs en rotation" value="10" color="#F5A623" emoji="🤖" />
+          <StatCard label="Auto-publiées (FR+EN)" value={publishedCount.toString()} color="#6C3FC7" emoji="📨" />
+          <StatCard label="Plateformes surveillées" value={platforms.toString()} color="#F5A623" emoji="🏦" />
         </motion.div>
 
         <motion.div

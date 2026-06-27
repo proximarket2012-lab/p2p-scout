@@ -364,8 +364,8 @@ export function OpportunityDetail({ opp, onClose, onPublished }: OpportunityDeta
                 </div>
               </div>
 
-              {/* Publish CTA */}
-              {opp.status === "ACTIVE" && (
+              {/* Publish CTA — only if not yet published AND opportunity is still active */}
+              {opp.status === "ACTIVE" && !opp.publishedAt && (
                 <div className="flex flex-wrap gap-3 pt-2">
                   <button
                     onClick={handlePublish}
@@ -392,11 +392,14 @@ export function OpportunityDetail({ opp, onClose, onPublished }: OpportunityDeta
                 </div>
               )}
 
-              {opp.status === "PUBLISHED" && opp.publishedAt && (
+              {opp.publishedAt && (
                 <div className="rounded-xl bg-[#00B5A3]/5 border border-[#00B5A3]/30 p-4 flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-[#00B5A3] shrink-0" />
                   <div className="text-sm text-white/80">
-                    Publié le <span className="font-medium text-white">{new Date(opp.publishedAt).toLocaleString("fr-FR")}</span> sur les canaux FR + EN.
+                    <span className="font-medium text-white">✓ Auto-publié</span> le{" "}
+                    <span className="font-medium text-white">{new Date(opp.publishedAt).toLocaleString("fr-FR")}</span>
+                    {" "}sur les canaux Telegram FR + EN via LLM{" "}
+                    <span className="font-mono text-[#6C3FC7]">{opp.llmModel || "round-robin"}</span>.
                   </div>
                 </div>
               )}

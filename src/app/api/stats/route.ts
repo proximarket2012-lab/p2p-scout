@@ -23,7 +23,7 @@ export async function GET() {
     scanLogs24h,
   ] = await Promise.all([
     db.opportunity.count({ where: { status: "ACTIVE" } }),
-    db.opportunity.count({ where: { status: "PUBLISHED" } }),
+    db.opportunity.count({ where: { publishedAt: { not: null } } }),
     db.opportunity.count({ where: { status: "EXPIRED" } }),
     db.opportunity.count({ where: { status: "SUSPICIOUS" } }),
     db.opportunity.count(),
@@ -96,7 +96,7 @@ export async function GET() {
       db.opportunity.count({
         where: {
           detectedAt: { gte: dayStart, lt: dayEnd },
-          status: "PUBLISHED",
+          publishedAt: { not: null },
         },
       }),
       db.opportunity.aggregate({

@@ -26,7 +26,6 @@ export async function POST(
   await db.opportunity.update({
     where: { id },
     data: {
-      status: "PUBLISHED",
       publishedAt: new Date(),
     },
   });

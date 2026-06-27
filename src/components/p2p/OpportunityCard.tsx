@@ -24,7 +24,7 @@ export function OpportunityCard({ opp, onSelect, index = 0 }: OpportunityCardPro
   const tl = timeLeft(opp.expiresAt);
   const isExpired = opp.status === "EXPIRED";
   const isSuspicious = opp.status === "SUSPICIOUS";
-  const isPublished = opp.status === "PUBLISHED";
+  const isPublished = !!opp.publishedAt;
 
   return (
     <motion.button
@@ -36,8 +36,20 @@ export function OpportunityCard({ opp, onSelect, index = 0 }: OpportunityCardPro
       whileHover={{ y: -4 }}
       className="group text-left w-full relative overflow-hidden rounded-2xl p-5 bg-white/[0.03] border border-white/10 hover:border-[#6C3FC7]/40 transition-all shadow-card hover:shadow-glow"
     >
-      {/* Status badge */}
-      <div className="absolute top-4 right-4">
+      {/* Status + Published badges */}
+      <div className="absolute top-4 right-4 flex flex-col items-end gap-1">
+        {isPublished && (
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wide"
+            style={{
+              color: "#00B5A3",
+              background: "#00B5A315",
+              border: "1px solid #00B5A330",
+            }}
+          >
+            ✓ Publié FR+EN
+          </span>
+        )}
         <span
           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide"
           style={{

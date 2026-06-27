@@ -484,6 +484,287 @@ Avec tier gratuit OpenRouter : 0 $ les premiers mois`,
       },
       tip: "Si tu dépasses le quota GitHub Free (2000 min/mois), passe le cron à \"*/15\" au lieu de \"*/5\". Tu feras 4× moins de runs.",
     },
+
+    // ── STEP 12: Vercel + Neon migration ─────────────────────
+    {
+      id: 12,
+      phaseId: 4,
+      title: "Migrer vers Vercel Hobby + Neon Postgres",
+      duration: "20 minutes",
+      difficulty: "Intermédiaire",
+      description: "Vercel Hobby (gratuit) héberge l'app Next.js avec HTTPS automatique et déploiement Git. Neon Postgres (free tier : 0.5 GB, 100 heures de compute/mois) remplace SQLite pour la production. Le code Prisma est déjà DB-agnostic — seule la connection string change.",
+      instructions: [
+        { text: "Crée un compte sur https://neon.tech (login GitHub)" },
+        { text: "Crée un projet Neon : p2p-arbitrage-scout, region Frankfurt (proche Afrique/Europe)" },
+        { text: "Copie la connection string pooler (format postgresql://...-pooler...)" },
+        { text: "Va sur https://vercel.com → New Project → importe ton repo GitHub" },
+        { text: "Framework preset : Next.js (auto-détecté)" },
+        { text: "Ajoute les variables d'environnement (voir bloc code)" },
+        { text: "Deploy → attend 2-3 min → ton app est live sur https://ton-app.vercel.app" },
+        { text: "Test : curl https://ton-app.vercel.app/api/stats → doit renvoyer du JSON" },
+      ],
+      code: {
+        language: "bash",
+        title: "Variables d'environnement Vercel (Settings → Environment Variables)",
+        content: `# Base de données Neon Postgres (POOLER pour serverless !)
+DATABASE_URL="postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/dbname?sslmode=require&pgbouncer=true&connect_timeout=15"
+
+# Direct connection (pour les migrations Prisma — sans -pooler)
+DIRECT_URL="postgresql://user:pass@ep-xxx.region.aws.neon.tech/dbname?sslmode=require"
+
+# LLM (z-ai-web-dev-sdk — déjà configuré)
+ZAI_API_KEY="..."
+
+# Telegram (production)
+TELEGRAM_BOT_TOKEN="..."
+TELEGRAM_CHANNEL_FR_ID="-100..."
+TELEGRAM_CHANNEL_EN_ID="-100..."
+
+# Sécurité endpoint trigger (OPTIONNEL mais recommandé)
+CRON_API_KEY="genere-une-cle-aleatoire-32-caracteres"
+
+# Une fois déployé, lance la migration Prisma :
+npx prisma migrate deploy
+# ou (si pas de migrations) :
+npx prisma db push`,
+      },
+      tip: "IMPORTANTE : utilise la connection POOLER (-pooler dans le hostname) pour DATABASE_URL. Vercel = serverless = nombreuses connexions courtes. Sans pooling, tu épuises les connexions Neon (max 100 sur free tier).",
+    },
+
+    // ── STEP 13: Prisma schema for Postgres ──────────────────
+    {
+      id: 13,
+      phaseId: 4,
+      title: "Adapter prisma/schema.prisma pour Neon Postgres",
+      duration: "5 minutes",
+      difficulty: "Débutant",
+      description: "Le schema Prisma actuel utilise SQLite (provider = \"sqlite\"). Pour Neon en production, change le provider vers postgresql. Prisma gère la traduction des types automatiquement (Int → INTEGER, Float → DOUBLE PRECISION, DateTime → TIMESTAMP, etc.).",
+      instructions: [
+        { text: "Édite prisma/schema.prisma" },
+        { text: "Change datasource.db.provider de \"sqlite\" à \"postgresql\"" },
+        { text: "Ajoute directUrl = env(\"DIRECT_URL\") pour les migrations" },
+        { text: "Commit + push → Vercel rebuild automatiquement" },
+        { text: "Lance prisma db push (ou migrate deploy) contre Neon" },
+      ],
+      code: {
+        language: "prisma",
+        title: "prisma/schema.prisma — datasource pour Neon",
+        content: `generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"           // ← était "sqlite"
+  url       = env("DATABASE_URL")    // pooler connection
+  directUrl = env("DIRECT_URL")      // direct connection (migrations)
+}
+
+// Tous les models restent IDENTIQUES.
+// Prisma traduit automatiquement :
+//   String   → TEXT
+//   Int      → INTEGER
+//   Float    → DOUBLE PRECISION
+//   Boolean  → BOOLEAN
+//   DateTime → TIMESTAMP(3)
+//   @id      → PRIMARY KEY
+//   @unique  → UNIQUE constraint
+//   @@index  → CREATE INDEX
+
+// Pour switcher entre dev (SQLite) et prod (Postgres) sans toucher le code,
+// utilise 2 fichiers .env :
+//   .env          → DATABASE_URL="file:./dev.db"  + provider="sqlite"
+//   .env.production → DATABASE_URL="postgresql://..."  + provider="postgresql"
+// Et un script qui détecte NODE_ENV.`,
+      },
+      tip: "Pour garder SQLite en local ET Postgres en prod : mets `provider = \"sqlite\"` dans schema.prisma (local), et crée un `prisma/schema.prod.prisma` identique avec `provider = \"postgresql\"`. Lance `prisma db push --schema=prisma/schema.prod.prisma` dans le build Vercel.",
+    },
+
+    // ── STEP 14: Cron bypass — THE HACK ──────────────────────
+    {
+      id: 14,
+      phaseId: 4,
+      title: "Hack : bypass du cron unique Vercel Hobby via crons externes + verrou Neon",
+      duration: "30 minutes",
+      difficulty: "Avancé",
+      description: "Vercel Hobby = 1 cron job max, fréquence quotidienne (1x/jour). Insuffisant pour scanner toutes les 5 min. Le hack : utiliser PLUSIEURS services de cron externes gratuits qui frappent /api/scan/trigger. L'endpoint est IDEMPOTENT grâce à un verrou distribué dans Neon (table ScanLock) + un debounce de 2 min. Résultat : scan effectif toutes les 1-5 min, gratuit, sans dépendre du cron Vercel.",
+      instructions: [
+        { text: "Vérifie que CRON_API_KEY est défini dans Vercel env vars" },
+        { text: "Configure 3 services externes (voir bloc code — Method A/B/C)" },
+        { text: "Test : curl -X POST https://ton-app.vercel.app/api/scan/trigger -H 'X-API-Key: ...'" },
+        { text: "Vérifie les logs Vercel → tu dois voir des appels /api/scan/trigger toutes les 1-5 min" },
+        { text: "Configure le cron Vercel (1/jour) UNIQUEMENT pour le rapport quotidien" },
+      ],
+      code: {
+        language: "bash",
+        title: "3 méthodes de cron externe (combine-les pour redondance)",
+        content: `# ═══════════════════════════════════════════════════════════
+# MÉTHODE A : UptimeRobot (gratuit, 5 min, 50 monitors)
+# ═══════════════════════════════════════════════════════════
+# 1. Va sur https://uptimerobot.com → Sign up
+# 2. Add New Monitor → Monitor Type = "HTTP(s)"
+# 3. Friendly Name : P2P Scout Scan
+# 4. URL : https://ton-app.vercel.app/api/scan/trigger
+# 5. (UptimeRobot ne supporte pas les headers custom en gratuit)
+#    → Solution : ne PAS définir CRON_API_KEY (open access)
+#    OU crée une URL proxy avec la clé en query : pas idéal.
+# 6. Monitoring Interval : 5 minutes
+# 7. UptimeRobot fait un GET → notre endpoint accepte GET (health check)
+#    mais ne déclenche PAS de scan.
+#    → Pour déclencher un scan via GET, crée /api/scan/trigger?run=1
+#    qui appelle runScan() si ?run=1 est présent.
+
+# ═══════════════════════════════════════════════════════════
+# MÉTHODE B : cron-job.org (gratuit, 1 min, headers custom OK)
+# ═══════════════════════════════════════════════════════════
+# 1. Va sur https://cron-job.org → Sign up
+# 2. Create Cronjob
+# 3. Title : P2P Scout Scan 5min
+# 4. URL : https://ton-app.vercel.app/api/scan/trigger
+# 5. Execution : Every 5 minutes (*/5 * * * *)
+# 6. Request Method : POST
+# 7. Headers : X-API-Key: <ta-cle-CRON_API_KEY>
+# 8. Save → le scan tourne toutes les 5 min, gratuit
+
+# ═══════════════════════════════════════════════════════════
+# MÉTHODE C : GitHub Actions (gratuit, 5 min, 2000 min/mois)
+# ═══════════════════════════════════════════════════════════
+# Crée .github/workflows/trigger_scan.yml dans ton repo :
+---
+name: Trigger P2P Scan
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Hit Vercel endpoint
+        run: |
+          curl -X POST "\${{ secrets.VERCEL_APP_URL }}/api/scan/trigger" \\
+            -H "X-API-Key: \${{ secrets.CRON_API_KEY }}" \\
+            --max-time 90
+---
+# 2000 min/mois / 2 min par run = 1000 runs/mois = 33/jour = toutes les 44 min
+# Pas assez. Solution : utilise cron-job.org EN PLUS de GitHub Actions.
+
+# ═══════════════════════════════════════════════════════════
+# MÉTHODE D : Upstash QStash (gratuit, 500 msgs/jour, le plus élégant)
+# ═══════════════════════════════════════════════════════════
+# QStash = queue serverless avec scheduling intégré.
+# Free tier : 500 messages/jour = 1 message toutes les 3 min.
+# 1. Va sur https://console.upstash.com → QStash
+# 2. Copie QSTASH_URL et QSTASH_TOKEN
+# 3. Crée un schedule :
+curl https://qstash.upstash.io/v2/schedules \\
+  -H "Authorization: Bearer $QSTASH_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "destination": "https://ton-app.vercel.app/api/scan/trigger",
+    "cron": "*/5 * * * *",
+    "headers": {"X-API-Key": "'"$CRON_API_KEY"'"}
+  }'
+# QStash garantit la livraison (retry auto si 500),
+# supporte les headers custom, et c'est GRATUIT jusqu'à 500 msg/jour.`,
+      },
+      tip: "Combine MÉTHODES B + C + D pour une redondance maximale. Même si un service tombe en panne, les autres continuent. L'idempotence (ScanLock + debounce) garantit qu'il n'y a JAMAIS de double scan, peu importe combien de triggers arrivent simultanément.",
+    },
+
+    // ── STEP 15: Vercel cron for daily report ────────────────
+    {
+      id: 15,
+      phaseId: 4,
+      title: "Configurer le cron Vercel (1/jour) pour le rapport quotidien",
+      duration: "10 minutes",
+      difficulty: "Débutant",
+      description: "Vercel Hobby autorise 1 cron job quotidien. On l'utilise UNIQUEMENT pour le rapport quotidien (8h UTC) — pas pour le scanner (géré par les crons externes). Le cron Vercel appelle /api/daily-report qui génère le résumé et publie sur les 2 canaux Telegram.",
+      instructions: [
+        { text: "À la racine du projet, crée vercel.json" },
+        { text: "Colle la config ci-dessous" },
+        { text: "Commit + push → Vercel détecte et active le cron" },
+        { text: "Vérifie dans Vercel dashboard → votre project → Cron Jobs" },
+      ],
+      code: {
+        language: "json",
+        title: "vercel.json — cron quotidien pour le rapport",
+        content: `{
+  "crons": [
+    {
+      "path": "/api/daily-report",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}
+
+// /api/daily-report/route.ts :
+// - Récupère les opportunités des dernières 24h
+// - Calcule le top 5 (meilleur spread)
+// - Génère un résumé FR + EN via LLM
+// - Publie sur les 2 canaux Telegram
+// - Log le rapport
+//
+// Vercel vérifie automatiquement que ce cron tourne 1x/jour max
+// (limite Hobby). Pas de souci de surcharge.`,
+      },
+      tip: "Vercel Hobby limite à 1 cron quotidien. Si tu veux 2 crons (rapport + health check), passe au plan Pro (20$/mois) OU utilise cron-job.org pour le 2ème. Le hack vise justement à éviter ça.",
+    },
+
+    // ── STEP 16: Auto-publish verification ───────────────────
+    {
+      id: 16,
+      phaseId: 6,
+      title: "Vérifier le pipeline auto-publish (scan → LLM → Telegram)",
+      duration: "10 minutes",
+      difficulty: "Intermédiaire",
+      description: "Le système est maintenant conçu pour : à chaque scan, si une opportunité éligible (spread ≥ 1,5%) est détectée, le LLM disponible (round-robin sur 10 modèles) rédige automatiquement le message en FR + EN, et publie sur les 2 canaux Telegram. Aucune intervention manuelle. Vérifie que tout fonctionne.",
+      instructions: [
+        { text: "Déclenche un scan : curl -X POST https://ton-app.vercel.app/api/scan/trigger -H 'X-API-Key: ...'" },
+        { text: "Vérifie la réponse JSON : opportunitiesPublished doit être > 0" },
+        { text: "Vérifie le canal Telegram FR → un nouveau message doit être apparu" },
+        { text: "Vérifie le canal Telegram EN → un nouveau message doit être apparu" },
+        { text: "Les messages doivent contenir : titre accrocheur, étapes 1+2, calcul bénéfice, temps estimé, risque, disclaimer, hashtags" },
+        { text: "Aucun terme technique dans les messages (test : demande à un non-crypto de lire)" },
+      ],
+      code: {
+        language: "bash",
+        title: "Test du pipeline complet",
+        content: `# 1. Déclenche un scan
+curl -X POST "https://ton-app.vercel.app/api/scan/trigger" \\
+  -H "X-API-Key: $CRON_API_KEY" \\
+  --max-time 60 | jq .
+
+# Réponse attendue :
+# {
+#   "ok": true,
+#   "success": true,
+#   "platformsChecked": 8,
+#   "opportunitiesCreated": 5,
+#   "opportunitiesPublished": 3,        ← 3 messages publiés (top spread)
+#   "opportunitiesSkippedDedup": 0,     ← 0 si pas de doublon récent
+#   "publishedOpportunities": [
+#     { "id": "...", "pair": "USDT/XAF", "spreadNet": 4.2, "llmModel": "claude-haiku-4-5" },
+#     { "id": "...", "pair": "USDT/NGN", "spreadNet": 3.8, "llmModel": "gemini-2.5-flash" },
+#     { "id": "...", "pair": "USDT/EUR", "spreadNet": 3.1, "llmModel": "mistral-small-3.1" }
+#   ]
+# }
+
+# 2. Vérifie que le LLM a round-robiné (3 modèles différents ci-dessus)
+
+# 3. Vérifie les canaux Telegram :
+#    - Canal FR → message en français, structure CDC, disclaimer, hashtags
+#    - Canal EN → message en anglais, même structure
+
+# 4. Vérifie la déduplication :
+#    - Re-déclenche un scan immédiatement
+#    - opportunitiesSkippedDedup > 0 (les mêmes paires sont ignorées 30 min)
+
+# 5. Vérifie l'idempotence :
+#    - Déclenche 3 scans en parallèle (curl & curl & curl)
+#    - 1 seul réussit, les 2 autres retournent skipped: "locked"`,
+      },
+      tip: "Le pipeline publie max 3 opportunités par scan pour éviter le spam (CDC § 5.1 : 3-15 messages/jour). Avec 6 scans/heure × 3 = 18/h max — le debounce de 2 min + dedup de 30 min limitent naturellement le volume réel à ~10-15/jour.",
+    },
   ],
 
   finalChecklist: [
@@ -492,14 +773,22 @@ Avec tier gratuit OpenRouter : 0 $ les premiers mois`,
     "✅ Bot ajouté comme admin des 2 canaux",
     "✅ Compte OpenRouter créé + clé API stockée dans GitHub Secrets",
     "✅ 4 secrets configurés (TELEGRAM_BOT_TOKEN, FR_ID, EN_ID, OPENROUTER_API_KEY)",
-    "✅ Workflow scanner.yml déployé avec cron 5 min",
-    "✅ Workflow daily_report.yml déployé (8h UTC)",
-    "✅ Workflow health_check.yml déployé (2h)",
-    "✅ Mini App déployée sur GitHub Pages",
+    "✅ Mini App déployée (GitHub Pages OU Vercel)",
     "✅ Bouton Mini App configuré dans @BotFather via /newapp",
     "✅ 8 APIs P2P testées manuellement",
-    "✅ Premier cycle complet validé (scan → LLM → publish)",
+    "✅ Premier cycle complet validé (scan → LLM → publish automatique)",
     "✅ Coût OpenRouter surveillé (< 10$/mois)",
+    "✅ Vercel Hobby + Neon Postgres configurés (DATABASE_URL pooler)",
+    "✅ prisma/schema.prisma migré vers postgresql",
+    "✅ Endpoint /api/scan/trigger déployé + idempotent (ScanLock)",
+    "✅ CRON_API_KEY défini dans Vercel env vars",
+    "✅ cron-job.org configuré (POST /api/scan/trigger toutes les 5 min)",
+    "✅ GitHub Actions trigger_scan.yml configuré (redondance)",
+    "✅ Upstash QStash configuré (redondance + retry garanti)",
+    "✅ vercel.json cron quotidien pour /api/daily-report (8h UTC)",
+    "✅ Auto-publish vérifié : scan → LLM FR+EN → Telegram automatique",
+    "✅ Déduplication 30 min vérifiée",
+    "✅ Idempotence verrou vérifiée (3 scans parallèles → 1 seul réussit)",
   ],
 };
 
