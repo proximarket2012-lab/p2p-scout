@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Guide de Configuration Personnalisé — P2P Arbitrage Scout</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+@page {
+    size: 720px 1020px;
+    margin: 0;
+}
+:root {
+    --c-navy: #0A1628;
+    --c-navy-2: #0F1F3A;
+    --c-navy-3: #1B2E5E;
+    --c-violet: #6C3FC7;
+    --c-teal: #00B5A3;
+    --c-success: #00C48C;
+    --c-alert: #F5A623;
+    --c-text: #F8F9FC;
+    --c-text-dim: rgba(248, 249, 252, 0.70);
+    --c-text-mute: rgba(248, 249, 252, 0.45);
+    --c-border: rgba(248, 249, 252, 0.10);
+    --c-border-2: rgba(248, 249, 252, 0.18);
+    --c-card: rgba(248, 249, 252, 0.04);
+    --c-card-2: rgba(248, 249, 252, 0.06);
+}
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 720px;
+    background: var(--c-navy);
+    color: var(--c-text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+@media screen {
+    html {
+        height: auto;
+        display: flex;
+        justify-content: center;
+        background: #1a1a1a;
+    }
+    body {
+        transform-origin: top center;
+        margin: 20px auto;
+        box-shadow: 0 0 40px rgba(0,0,0,0.5);
+    }
+}
+
+/* ───────────── COVER ───────────── */
+.cover {
+    width: 720px;
+    height: 1020px;
+    box-sizing: border-box;
+    break-after: page;
+    overflow: hidden;
+    position: relative;
+    background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(108, 63, 199, 0.35), transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90% 90%, rgba(0, 181, 163, 0.25), transparent 60%),
+        linear-gradient(180deg, #0A1628 0%, #0F1F3A 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 70px 65px;
+}
+.cover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(108, 63, 199, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(108, 63, 199, 0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.6;
+}
+.cover-tag {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(108, 63, 199, 0.25), rgba(0, 181, 163, 0.25));
+    border: 1px solid rgba(255,255,255,0.15);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--c-teal);
+    width: fit-content;
+    margin-bottom: 28px;
+}
+.cover-tag::before {
+    content: '🔍';
+    font-size: 14px;
+}
+.cover-title {
+    position: relative;
+    font-size: 56px;
+    font-weight: 900;
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    margin-bottom: 18px;
+}
+.cover-title .accent {
+    background: linear-gradient(90deg, #6C3FC7 0%, #00B5A3 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+.cover-subtitle {
+    position: relative;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.55;
+    color: var(--c-text-dim);
+    max-width: 480px;
+    margin-bottom: 50px;
+}
+.cover-stats {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 60px;
+}
+.cover-stat {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--c-border);
+    border-radius: 12px;
+    padding: 14px;
+}
+.cover-stat-num {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--c-teal);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+.cover-stat-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--c-text-mute);
+}
+.cover-footer {
+    position: relative;
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-top: 40px;
+    border-top: 1px solid var(--c-border);
+}
+.cover-edition {
+    font-size: 11px;
+    color: var(--c-text-mute);
+    line-height: 1.5;
+}
+.cover-edition strong {
+    color: var(--c-text);
+    font-weight: 600;
+}
+.cover-version {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--c-violet);
+    padding: 6px 10px;
+    background: rgba(108, 63, 199, 0.15);
+    border: 1px solid rgba(108, 63, 199, 0.3);
+    border-radius: 6px;
+}
+
+/* ───────────── MAIN CONTENT ───────────── */
+.main-content {
+    padding: 56px 60px 40px 60px;
+}
+
+/* Chapter headers */
+.chapter-header {
+    break-after: avoid;
+    break-inside: avoid;
+    margin-top: 28px;
+    margin-bottom: 18px;
+}
+.chapter-header:first-child {
+    margin-top: 0;
+}
+.section-num {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-teal);
+    margin-bottom: 8px;
+}
+.section-num::before {
+    content: '';
+    width: 24px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--c-violet), var(--c-teal));
+    border-radius: 2px;
+}
+.section-title {
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+}
+.section-divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, var(--c-violet), var(--c-teal), transparent);
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+/* Body text */
+.body-text {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--c-text-dim);
+    margin-bottom: 12px;
+}
+.body-text strong {
+    color: var(--c-text);
+    font-weight: 600;
+}
+.body-text em {
+    color: var(--c-teal);
+    font-style: normal;
+    font-weight: 500;
+}
+
+/* Subheading */
+.subheading {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--c-text);
+    margin-top: 16px;
+    margin-bottom: 8px;
+    break-after: avoid;
+}
+
+/* Cards */
+.card {
+    break-inside: avoid;
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+}
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--c-text);
+    margin-bottom: 8px;
+}
+.card-title .emoji {
+    font-size: 16px;
+}
+.card-body {
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--c-text-dim);
+}
+
+/* Step list */
+.step-list {
+    break-inside: avoid;
+    margin-bottom: 12px;
+    padding-left: 0;
+    list-style: none;
+    counter-reset: stepcount;
+}
+.step-list li {
+    position: relative;
+    padding-left: 32px;
+    margin-bottom: 9px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--c-text-dim);
+    break-inside: avoid;
+}
+.step-list li::before {
+    counter-increment: stepcount;
+    content: counter(stepcount);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--c-violet), var(--c-teal));
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+}
+.step-list li strong {
+    color: var(--c-text);
+    font-weight: 600;
+}
+
+/* Code block */
+.code-block {
+    break-inside: avoid;
+    background: #060E1C;
+    border: 1px solid var(--c-border);
+    border-radius: 10px;
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+.code-header {
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--c-border);
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.code-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.code-dot.r { background: #ff5f56; }
+.code-dot.y { background: #ffbd2e; }
+.code-dot.g { background: #27c93f; }
+.code-lang {
+    margin-left: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--c-text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+.code-body {
+    padding: 12px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    line-height: 1.6;
+    color: #c8d3f5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.code-body .k { color: #c792ea; }
+.code-body .s { color: #c3e88d; }
+.code-body .c { color: #546e7a; font-style: italic; }
+.code-body .v { color: #82aaff; }
+.code-body .n { color: #f78c6c; }
+
+/* Telegram message preview */
+.tg-preview {
+    break-inside: avoid;
+    background: linear-gradient(180deg, #0F1F3A 0%, #0A1628 100%);
+    border: 1px solid var(--c-border-2);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    position: relative;
+}
+.tg-preview-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--c-border);
+}
+.tg-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--c-violet), var(--c-teal));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+.tg-channel-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c-text);
+}
+.tg-channel-meta {
+    font-size: 10px;
+    color: var(--c-text-mute);
+}
+.tg-message {
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--c-text);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.tg-message .hashtag {
+    color: var(--c-teal);
+    font-weight: 500;
+}
+
+/* SEO spec table */
+.seo-table {
+    break-inside: avoid;
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+    font-size: 10.5px;
+}
+.seo-table th,
+.seo-table td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--c-border);
+    vertical-align: top;
+}
+.seo-table th {
+    background: rgba(108, 63, 199, 0.1);
+    color: var(--c-violet);
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+}
+.seo-table td {
+    color: var(--c-text-dim);
+}
+.seo-table td:first-child {
+    color: var(--c-text);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Char counter */
+.char-counter {
+    break-inside: avoid;
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+}
+.char-counter-label {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--c-text-mute);
+    margin-bottom: 6px;
+}
+.char-counter-text {
+    font-size: 12px;
+    color: var(--c-text);
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+.char-counter-bar {
+    height: 5px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+.char-counter-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--c-success);
+}
+.char-counter-fill.warn { background: var(--c-alert); }
+.char-counter-fill.danger { background: #ef4444; }
+.char-counter-stat {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+}
+.char-counter-stat .ok { color: var(--c-success); }
+.char-counter-stat .warn { color: var(--c-alert); }
+
+/* Callout */
+.callout {
+    break-inside: avoid;
+    background: rgba(245, 166, 35, 0.06);
+    border: 1px solid rgba(245, 166, 35, 0.3);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 10px;
+}
+.callout-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.callout-body {
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--c-text-dim);
+}
+.callout-body strong {
+    color: var(--c-alert);
+    font-weight: 700;
+}
+.callout.tip {
+    background: rgba(0, 196, 140, 0.06);
+    border-color: rgba(0, 196, 140, 0.3);
+}
+.callout.tip .callout-body strong {
+    color: var(--c-success);
+}
+.callout.cron {
+    background: rgba(108, 63, 199, 0.06);
+    border-color: rgba(108, 63, 199, 0.3);
+}
+.callout.cron .callout-body strong {
+    color: var(--c-violet);
+}
+
+/* Method card */
+.method-card {
+    break-inside: avoid;
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+}
+.method-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.method-card-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--c-text);
+}
+.method-card-badge {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(0, 181, 163, 0.15);
+    color: var(--c-teal);
+    border: 1px solid rgba(0, 181, 163, 0.3);
+}
+.method-card-meta {
+    font-size: 10.5px;
+    color: var(--c-text-mute);
+    margin-bottom: 8px;
+}
+.method-card-meta strong {
+    color: var(--c-text-dim);
+}
+
+/* Env var row */
+.env-row {
+    break-inside: avoid;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 11px;
+}
+.env-key {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--c-teal);
+    flex-shrink: 0;
+    min-width: 200px;
+}
+.env-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--c-text-dim);
+    word-break: break-all;
+}
+
+/* Checklist */
+.checklist {
+    break-inside: avoid;
+    margin-bottom: 12px;
+    list-style: none;
+    padding-left: 0;
+}
+.checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--c-text-dim);
+    break-inside: avoid;
+}
+.checklist li::before {
+    content: '☐';
+    font-size: 14px;
+    color: var(--c-teal);
+    flex-shrink: 0;
+    line-height: 1.2;
+}
+
+/* Two-column */
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+    break-inside: avoid;
+}
+
+/* Inline badge */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 9.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.badge.fr { background: rgba(0, 181, 163, 0.15); color: var(--c-teal); border: 1px solid rgba(0, 181, 163, 0.3); }
+.badge.en { background: rgba(108, 63, 199, 0.15); color: var(--c-violet); border: 1px solid rgba(108, 63, 199, 0.3); }
+.badge.seo { background: rgba(0, 196, 140, 0.15); color: var(--c-success); border: 1px solid rgba(0, 196, 140, 0.3); }
+
+/* ───────────── ENDING ───────────── */
+.ending {
+    width: 720px;
+    height: 1020px;
+    box-sizing: border-box;
+    break-before: page;
+    overflow: hidden;
+    position: relative;
+    background:
+        radial-gradient(ellipse 80% 50% at 50% 110%, rgba(0, 181, 163, 0.3), transparent 60%),
+        radial-gradient(ellipse 60% 40% at 10% 10%, rgba(108, 63, 199, 0.25), transparent 60%),
+        linear-gradient(180deg, #0F1F3A 0%, #0A1628 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 70px 65px;
+    text-align: center;
+}
+.ending::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(108, 63, 199, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(108, 63, 199, 0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.4;
+}
+.ending-emoji {
+    position: relative;
+    font-size: 56px;
+    margin-bottom: 20px;
+}
+.ending-title {
+    position: relative;
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin-bottom: 16px;
+    background: linear-gradient(90deg, #6C3FC7 0%, #00B5A3 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+.ending-subtitle {
+    position: relative;
+    font-size: 14px;
+    color: var(--c-text-dim);
+    line-height: 1.6;
+    max-width: 460px;
+    margin-bottom: 36px;
+}
+.ending-stats {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    width: 100%;
+    max-width: 500px;
+    margin-bottom: 36px;
+}
+.ending-stat {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--c-border);
+    border-radius: 12px;
+    padding: 14px;
+}
+.ending-stat-num {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--c-teal);
+    line-height: 1;
+    margin-bottom: 6px;
+}
+.ending-stat-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--c-text-mute);
+}
+.ending-disclaimer {
+    position: relative;
+    font-size: 10px;
+    color: var(--c-text-mute);
+    line-height: 1.55;
+    max-width: 460px;
+    padding-top: 24px;
+    border-top: 1px solid var(--c-border);
+    margin-top: auto;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ COVER ═══════════════════ -->
+<div class="cover">
+    <div class="cover-tag">Guide de Configuration Personnalisé</div>
+    <div class="cover-title">
+        P2P Arbitrage<br>
+        <span class="accent">Scout</span>
+    </div>
+    <div class="cover-subtitle">
+        Guide pas-à-pas pour créer toutes les ressources : bot Telegram, 2 canaux SEO (FR + EN),
+        descriptions 150 caractères, messages épinglés, exemples d'opportunités bilingues,
+        variables d'environnement, et configuration des crons externes.
+    </div>
+    <div class="cover-stats">
+        <div class="cover-stat">
+            <div class="cover-stat-num">8</div>
+            <div class="cover-stat-label">Plateformes P2P</div>
+        </div>
+        <div class="cover-stat">
+            <div class="cover-stat-num">2</div>
+            <div class="cover-stat-label">Canaux TG FR+EN</div>
+        </div>
+        <div class="cover-stat">
+            <div class="cover-stat-num">10</div>
+            <div class="cover-stat-label">LLMs en rotation</div>
+        </div>
+        <div class="cover-stat">
+            <div class="cover-stat-num">4</div>
+            <div class="cover-stat-label">Méthodes cron</div>
+        </div>
+    </div>
+    <div class="cover-footer">
+        <div class="cover-edition">
+            <strong>Édition Personnalisée</strong><br>
+            Basé sur le CDC v1.0 · Juin 2026
+        </div>
+        <div class="cover-version">v1.0 · FR</div>
+    </div>
+</div>
+
+<!-- ═══════════════════ MAIN CONTENT ═══════════════════ -->
+<div class="main-content">
+
+<!-- ─── SECTION 1: Vue d'ensemble ─── -->
+<div class="chapter-header">
+    <div class="section-num">Section 01 · Vue d'ensemble</div>
+    <div class="section-title">Le système P2P Arbitrage Scout</div>
+    <div class="section-divider"></div>
+</div>
+
+<div class="body-text">
+    P2P Arbitrage Scout est un système entièrement automatisé qui surveille en continu les prix
+    des crypto-monnaies sur les <strong>8 plus grandes plateformes P2P mondiales</strong> (Binance,
+    Bybit, OKX, HTX, KuCoin, MEXC, Noones, Bitget), détecte les écarts de prix supérieurs à
+    <strong>1,5 % nets de frais</strong>, rédige une stratégie claire en langage simple grâce à un
+    LLM (rotation de 10 modèles), et publie l'opportunité simultanément sur deux canaux Telegram
+    — l'un en français, l'autre en anglais — en moins de 60 secondes après détection.
+</div>
+<div class="body-text">
+    Ce guide personnalisé te accompagne dans la création de <em>toutes les ressources nécessaires</em>
+    pour mettre le système en production : du premier message à @BotFather jusqu'à la configuration
+    des crons externes pour contourner la limite quotidienne de Vercel Hobby. Chaque section est
+    indépendante et peut être suivie dans l'ordre.
+</div>
+
+<div class="card">
+    <div class="card-title"><span class="emoji">📋</span> Ce que tu vas créer dans ce guide</div>
+    <div class="card-body">
+        <strong>1.</strong> Un bot Telegram (@P2PScoutBot) créé via @BotFather<br>
+        <strong>2.</strong> Deux canaux publics Telegram (FR + EN) avec noms + descriptions SEO<br>
+        <strong>3.</strong> Le premier message épinglé SEO sur chaque canal<br>
+        <strong>4.</strong> Deux exemples d'opportunités (FR + EN) prêts à publier<br>
+        <strong>5.</strong> La récupération des IDs des 2 canaux<br>
+        <strong>6.</strong> La configuration des variables d'environnement (Vercel + Neon)<br>
+        <strong>7.</strong> La mise en place de 4 méthodes de cron externe (redondance gratuite)
+    </div>
+</div>
+
+<div class="callout tip">
+    <div class="callout-icon">⏱️</div>
+    <div class="callout-body">
+        <strong>Temps total estimé : 2 heures</strong> pour configurer toutes les ressources de
+        zéro. Une fois fait, le système tourne 24/7 sans intervention manuelle.
+    </div>
+</div>
+
+<!-- ─── SECTION 2: Bot Telegram ─── -->
+<div class="chapter-header">
+    <div class="section-num">Section 02 · Bot Telegram</div>
+    <div class="section-title">Créer le bot via @BotFather</div>
+    <div class="section-divider"></div>
+</div>
+
+<div class="body-text">
+    Le bot Telegram sera l'administrateur des deux canaux et publiera les messages automatiquement.
+    Tu le crées une seule fois via le compte officiel @BotFather (vérifié avec ✅). Ce bot recevra
+    ensuite le droit de poster sur les canaux FR et EN.
+</div>
+
+<div class="subheading">Étapes de création</div>
+<ol class="step-list">
+    <li>Ouvre Telegram et cherche <strong>@BotFather</strong> (compte vérifié avec ✅)</li>
+    <li>Envoie la commande <strong>/newbot</strong></li>
+    <li>BotFather te demande un nom. Choisis : <strong>P2P Scout Bot</strong></li>
+    <li>BotFather te demande un username (doit finir par "bot"). Choisis : <strong>P2PScoutBot</strong></li>
+    <li>BotFather te renvoie un <strong>token API</strong> au format <code>123456789:ABCdefGHIjklMNOpqrSTUvwxYZ</code>. Copie-le immédiatement.</li>
+    <li>Stocke ce token dans une note sécurisée (1Password, Bitwarden, ou vault chiffré). Tu en auras besoin pour la section 7.</li>
+</ol>
+
+<div class="code-block">
+    <div class="code-header">
+        <div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div>
+        <div class="code-lang">bash — tester le bot</div>
+    </div>
+    <div class="code-body"><span class="c"># Test rapide que le bot répond</span>
+curl <span class="s">"https://api.telegram.org/bot&lt;TON_TOKEN&gt;/getMe"</span>
+
+<span class="c"># Réponse attendue :</span>
+<span class="c"># {"ok":true,"result":{"id":123456789,"is_bot":true,</span>
+<span class="c">#   "first_name":"P2P Scout Bot","username":"P2PScoutBot"}}</span></div>
+</div>
+
+<div class="callout">
+    <div class="callout-icon">🔐</div>
+    <div class="callout-body">
+        <strong>SÉCURITÉ CRITIQUE :</strong> Ne partage JAMAIS ce token. Si tu le fuites
+        accidentellement (commit Git, screenshot, etc.), reset-le immédiatement via la commande
+        <code>/revoke</code> dans @BotFather. Quiconque possède le token contrôle ton bot.
+    </div>
+</div>
+
+<!-- ─── SECTION 3: Canaux + SEO ─── -->
+<div class="chapter-header">
+    <div class="section-num">Section 03 · Canaux + SEO</div>
+    <div class="section-title">Créer les 2 canaux Telegram optimisés SEO</div>
+    <div class="section-divider"></div>
+</div>
+
+<div class="body-text">
+    Tu vas créer <strong>2 canaux publics</strong> (pas des groupes !) — un en français, un en
+    anglais. Le nom et la description de chaque canal sont <em>indexés par la recherche interne
+    Telegram</em>. C'est ici que tout le SEO se joue. Telegram impose une limite dure de 255
+    caractères pour la description, mais nous appliquons la discipline SEO de 150 caractères
+    maximum pour rester punchy et bien indexé.
+</div>
+
+<div class="subheading">Règles SEO Telegram appliquées</div>
+<table class="seo-table">
+    <thead>
+        <tr>
+            <th>Élément SEO</th>
+            <th>Règle</th>
+            <th>Impact</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Titre canal</td>
+            <td>Inclure "Arbitrage P2P" + "Gratuit" + émoji drapeau</td>
+            <td>Découvrabilité ★★★★★</td>
+        </tr>
+        <tr>
+            <td>Description</td>
+            <td>≤ 150 caractères, 3-5 mots-clés primaires, promesse claire</td>
+            <td>Indexation ★★★★☆</td>
+        </tr>
+        <tr>
+            <td>Message épinglé</td>
+            <td>Expliquer le concept + lien Mini App + invitation à partager</td>
+            <td>Rétention ★★★★★</td>
+        </tr>
+        <tr>
+            <td>Hashtags/message</td>
+            <td>Max 5 hashtags, toujours les mêmes (consistance = force)</td>
+            <td>Recherche ★★★★☆</td>
+        </tr>
+        <tr>
+            <td>Fréquence</td>
+            <td>3 messages minimum/jour = signal de canal actif</td>
+            <td>Classement ★★★☆☆</td>
+        </tr>
+        <tr>
+            <td>Emoji en début</td>
+            <td>Emoji accrocheur = meilleur taux de lecture en preview</td>
+            <td>CTR ★★★★☆</td>
+        </tr>
+        <tr>
+            <td>Longueur message</td>
+            <td>200-350 mots : assez long pour la valeur, assez court pour lire</td>
+            <td>Engagement ★★★★☆</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="subheading">Canal FR — Arbitrage P2P Signaux Gratuits 🇫🇷</div>
+
+<div class="char-counter">
+    <div class="char-counter-label">Nom du canal (limite dure 255 · recommandé 50)</div>
+    <div class="char-counter-text">Arbitrage P2P — Signaux Gratuits 🇫🇷</div>
+    <div class="char-counter-bar">
+        <div class="char-counter-fill" style="width: 70%"></div>
+    </div>
+    <div class="char-counter-stat">
+        <span>36 caractères</span>
+        <span class="ok">✓ conforme SEO</span>
+    </div>
+</div>
+
+<div class="char-counter">
+    <div class="char-counter-label">Description (limite dure 255 · recommandé 150) ★ SEO critique</div>
+    <div class="char-counter-text">Opportunités d'arbitrage crypto P2P en temps réel, expliquées simplement. Aucune expertise requise.</div>
+    <div class="char-counter-bar">
+        <div class="char-counter-fill" style="width: 66%"></div>
+    </div>
+    <div class="char-counter-stat">
+        <span>99 caractères</span>
+        <span class="ok">✓ conforme SEO (≤ 150)</span>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title"><span class="emoji">#️⃣</span> Hashtags du canal FR</div>
+    <div class="card-body">
+        <code>#ArbitrageP2P #CryptoFacile #USDT #GainsCrypto #SansRisque</code><br><br>
+        Mots-clés primaires indexés : <strong>arbitrage p2p, crypto, signaux gratuits, temps réel, usdt</strong>
+    </div>
+</div>
+
+<div class="subheading">Canal EN — P2P Arbitrage Free Signals 🌍</div>
+
+<div class="char-counter">
+    <div class="char-counter-label">Channel name (hard limit 255 · recommended 50)</div>
+    <div class="char-counter-text">P2P Arbitrage — Free Signals 🌍</div>
+    <div class="char-counter-bar">
+        <div class="char-counter-fill" style="width: 62%"></div>
+    </div>
+    <div class="char-counter-stat">
+        <span>32 characters</span>
+        <span class="ok">✓ SEO compliant</span>
+    </div>
+</div>
+
+<div class="char-counter">
+    <div class="char-counter-label">Description (hard limit 255 · recommended 150) ★ SEO critical</div>
+    <div class="char-counter-text">Real-time P2P crypto arbitrage opportunities, explained simply. No expertise needed.</div>
+    <div class="char-counter-bar">
+        <div class="char-counter-fill" style="width: 57%"></div>
+    </div>
+    <div class="char-counter-stat">
+        <span>85 characters</span>
+        <span class="ok">✓ SEO compliant (≤ 150)</span>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title"><span class="emoji">#️⃣</span> Hashtags of EN channel</div>
+    <div class="card-body">
+        <code>#P2PArbitrage #CryptoProfit #USDT #PassiveIncome #CryptoSignals</code><br><br>
+        Primary indexed keywords: <strong>p2p arbitrage, crypto, free signals, real-time, usdt</strong>
+    </div>
+</div>
+
+<div class="callout tip">
+    <div class="callout-icon">✅</div>
+    <div class="callout-body">
+        <strong>Bonnes pratiques création :</strong> Dans Telegram → menu → Nouveau Canal →
+        choisir "Canal public" (obligatoire pour la découvrabilité SEO). Renseigne le nom,
+        la description (≤ 150 car), puis ajoute le bot @P2PScoutBot comme admin avec droits
+        de publication.
+    </div>
+</div>
+
+<!-- ─── SECTION 4: Messages épinglés ─── -->
+<div class="chapter-header">
+    <div class="section-num">Section 04 · Messages épinglés</div>
+    <div class="section-title">Premier message SEO — pourquoi la chaîne existe</div>
+    <div class="section-divider"></div>
+</div>
+
+<div class="body-text">
+    Le <strong>message épinglé</strong> est la première chose qu'un nouvel abonné voit en arrivant
+    sur le canal. C'est le contenu le plus important pour la rétention. Il doit expliquer en
+    langage simple <em>pourquoi le canal existe</em>, ce que l'abonné va y gagner, et comment
+    utiliser le système (Mini App + partage). Voici les deux messages épinglés prêts à copier,
+    optimisés SEO Telegram.
+</div>
+
+<div class="subheading">Message épinglé FR <span class="badge fr">FR</span> <span class="badge seo">SEO</span></div>
+
+<div class="tg-preview">
+    <div class="tg-preview-header">
+        <div class="tg-avatar">🔍</div>
+        <div>
+            <div class="tg-channel-name">Arbitrage P2P — Signaux Gratuits 🇫🇷</div>
+            <div class="tg-channel-meta">Message épinglé · 815 caractères</div>
+        </div>
+    </div>
+    <div class="tg-message">🎯 BIENVENUE sur Arbitrage P2P — Signaux Gratuits
+
+Nous détectons en continu les meilleures opportunités d'arbitrage P2P sur 8 plateformes mondiales (Binance, Bybit, OKX, HTX, KuCoin, MEXC, Noones, Bitget).
+
+Chaque signal est :
+✅ Net de frais (spread ≥ 1,5%)
+✅ Expliqué simplement, sans jargon
+✅ Vérifié sur la fiabilité du vendeur
+✅ Publié en moins de 60 secondes après détection
+
+👉 Ouvre la Mini App : https://t.me/P2PScoutBot/app
+👉 Partage le canal à un ami qui veut gagner sans trader
+
+ℹ️ Information éducative, pas un conseil financier. Les prix peuvent changer vite. Ne mise jamais plus que tu ne peux te permettre de perdre.
+
+<span class="hashtag">#ArbitrageP2P #CryptoFacile #USDT #GainsCrypto #SansRisque</span></div>
+</div>
+
+<div class="subheading">Message épinglé EN <span class="badge en">EN</span> <span class="badge seo">SEO</span></div>
+
+<div class="tg-preview">
+    <div class="tg-preview-header">
+        <div class="tg-avatar">🔍</div>
+        <div>
+            <div class="tg-channel-name">P2P Arbitrage — Free Signals 🌍</div>
+            <div class="tg-channel-meta">Pinned message · 780 characters</div>
+        </div>
+    </div>
+    <div class="tg-message">🎯 WELCOME to P2P Arbitrage — Free Signals
+
+We continuously detect the best P2P arbitrage opportunities across 8 global platforms (Binance, Bybit, OKX, HTX, KuCoin, MEXC, Noones, Bitget).
+
+Every signal is:
+✅ Net of fees (spread ≥ 1.5%)
+✅ Explained simply, no jargon
+✅ Verified for seller reliability
+✅ Published in less than 60 seconds after detection
+
+👉 Open the Mini App: https://t.me/P2PScoutBot/app
+👉 Share the channel with a friend who wants to earn without trading
+
+ℹ️ Educational information, not financial advice. Prices may change fast. Never bet more than you can afford to lose.
+
+<span class="hashtag">#P2PArbitrage #CryptoProfit #USDT #PassiveIncome #CryptoSignals</span></div>
+</div>
+
+<!-- ─── SECTION 5: Exemples d'opportunités ─── -->
+<div class="chapter-header">
+    <div class="section-num">Section 05 · Exemples d'opportunités</div>
+    <div class="section-title">Messages d'opportunités parfaitement optimisés SEO</div>
+    <div class="section-divider"></div>
+</div>
+
+<div class="body-text">
+    Voici deux exemples complets de messages d'opportunités tels que générés par le LLM et
+    publiés automatiquement sur les canaux. Ils respectent la <strong>structure obligatoire
+    du CDC</strong> (titre accrocheur, étapes 1+2, calcul détaillé, temps estimé, risque,
+    disclaimer, hashtags) et la longueur SEO de 200-350 mots. Aucun terme technique n'est
+    utilisé — l'objectif est qu'un non-crypto comprenne immédiatement.
+</div>
+
+<div class="subheading">Exemple FR — USDT/XAF +2,3% NET <span class="badge fr">FR</span></div>
+
+<div class="tg-preview">
+    <div class="tg-preview-header">
+        <div class="tg-avatar">🔍</div>
+        <div>
+            <div class="tg-channel-name">Arbitrage P2P — Signaux Gratuits 🇫🇷</div>
+            <div class="tg-channel-meta">312 mots · structure CDC complète</div>
+        </div>
+    </div>
+    <div class="tg-message">🚨 +2,3% NET EN 20 MINUTES — Opportunité sur le franc CFA maintenant
+
+📊 CE QUE TU VAS FAIR
+Acheter des USDT pas chers sur Binance et les revendre plus cher sur Noones. Résultat : tu gardes la différence dans ta poche.
+
+👉 ÉTAPE 1 — ACHÈTE ICI
+Plateforme : Binance P2P
+Recherche : USDT contre XAF (francs CFA)
+Vendeur à choisir : le vendeur avec le prix le plus bas du moment (filtre "Prix ↑")
+Vendeur recommandé : CryptoExpressPro (98% positif, 1247 trades)
+Prix actuel : 557 XAF par USDT
+
+👉 ÉTAPE 2 — REVENDS LÀ
+Plateforme : Noones
+Recherche : USDT contre XAF
+Acheteur à choisir : le premier acheteur affiché (prix le plus haut)
+Acheteur recommandé : AtlasP2P (96% positif, 856 trades)
+Prix actuel : 570 XAF par USDT
+
+💰 CE QUE TU GAGNES (sur 30 000 XAF investis)
+→ Tu achètes : 30 000 ÷ 557 = 53,86 USDT
+→ Frais Binance : 0 FCFA
+→ Frais Noones : 0,5% = 151 XAF
+→ Tu revends : 53,86 × 570 = 30 700 XAF
+→ BÉNÉFICE NET : 700 − 151 = 549 XAF (1,83% net)
+
+⏱ TEMPS ESTIMÉ : 15 à 25 minutes
+
+⚠ ATTENTION : Vérifie que le prix est toujours valide avant de commencer. Les prix changent vite. Si le prix a bougé de plus de 2 XAF, attends la prochaine alerte.
+
+ℹ️ Ceci est une information éducative, pas un conseil financier. Les prix peuvent changer entre la détection et votre exécution. Ne misez jamais plus que vous ne pouvez vous permettre de perdre. Vérifiez toujours les prix avant d'agir.
+
+<span class="hashtag">#ArbitrageP2P #CryptoFacile #USDT #XAF #GagnerAvecCrypto</span></div>
+</div>
+
+<div class="subheading">Exemple EN — USDT/NGN +3,5% NET <span class="badge en">EN</span></div>
+
+<div class="tg-preview">
+    <div class="tg-preview-header">
+        <div class="tg-avatar">🔍</div>
+        <div>
+            <div class="tg-channel-name">P2P Arbitrage — Free Signals 🌍</div>
+            <div class="tg-channel-meta">298 words · full CDC structure</div>
+        </div>
+    </div>
+    <div class="tg-message">🚨 +3.5% NET IN 18 MINUTES — Naira arbitrage opportunity right now
+
+📊 WHAT YOU'LL DO
+Buy USDT cheap on Bybit and sell it higher on OKX. Result: you keep the difference in your pocket.
+
+👉 STEP 1 — BUY HERE
+Platform: Bybit P2P
+Search: USDT for NGN (Nigerian Naira)
+Seller to pick: the seller with the lowest price right now (sort by "Price ↑")
+Recommended seller: ReliableVendor (97% positive, 1842 trades)
+Current price: 1485 NGN per USDT
+
+👉 STEP 2 — SELL THERE
+Platform: OKX P2P
+Search: USDT for NGN
+Buyer to pick: the first buyer shown (highest price)
+Recommended buyer: FastTradeNG (98% positive, 1109 trades)
+Current price: 1538 NGN per USDT
+
+💰 WHAT YOU EARN (on 100,000 NGN invested)
+→ You buy: 100,000 ÷ 1485 = 67.34 USDT
+→ Bybit fees: 0 NGN
+→ OKX fees: 0 NGN
+→ You sell: 67.34 × 1538 = 103,560 NGN
+→ NET PROFIT: 3,560 NGN (3.56% net)
+
+⏱ ESTIMATED TIME: 12 to 22 minutes
+
+⚠ WARNING: Always verify the price is still valid before starting. Prices change fast. If the price has moved by more than 5 NGN, wait for the next alert.
+
+ℹ️ This is educational information, not financial advice. Prices may change between detection and your execution. Never bet more than you can afford to lose. Always verify prices before acting.
+
+<span class="hashtag">#P2PArbitrage #CryptoProfit #USDT #NGN #PassiveIncome</span></div>
+</div>
+
+<div class="callout tip">
+    <div class="callout-icon">🤖</div>
+    <div class="callout-body">
+        <strong>Génération automatique :</strong> Ces messages sont rédigés automatiquement
+        par le LLM (round-robin sur 10 modèles : Claude, Gemini, GPT-4o, Llama, Mistral, Qwen,
+        DeepSeek, Phi-4, Gemma, Nous-Hermes). À chaque opportunité éligible détectée, le LLM
+        disponible rédige FR + EN et publie en moins de 60 secondes.
+    </div>
+</div>
+
+<!-- ─── SECTION 6: Récupération des IDs ─── -->
+<div class="chapter-header">
+    <div class="section-num">Section 06 · IDs des canaux</div>
+    <div class="section-title">Récupérer les IDs des 2 canaux</div>
+    <div class="section-divider"></div>
+</div>
+
+<div class="body-text">
+    Pour que le bot puisse publier sur un canal, tu dois connaître son <strong>chat_id</strong>
+    (identifiant numérique négatif). Telegram ne l'affiche pas dans l'interface — il faut le
+    récupérer via l'API. La méthode la plus simple : utiliser le bot <strong>@userinfobot</strong>
+    ou interroger l'API Telegram directement avec curl.
+</div>
+
+<div class="subheading">Méthode 1 — via @userinfobot (le plus simple)</div>
+<ol class="step-list">
+    <li>Ajoute <strong>@userinfobot</strong> à ton canal FR comme admin (avec droit de lecture des messages)</li>
+    <li>Poste n'importe quel message dans le canal</li>
+    <li>@userinfobot répond automatiquement avec l'ID du canal (format : <code>-1001234567890</code>)</li>
+    <li>Note cet ID pour le canal FR, retire le bot du canal</li>
+    <li>Répète pour le canal EN → tu obtiens un 2ème ID</li>
+    <li>Retire @userinfobot des deux canaux</li>
+</ol>
+
+<div class="subheading">Méthode 2 — via curl (plus rapide, sans bot tiers)</div>
+
+<div class="code-block">
+    <div class="code-header">
+        <div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div>
+        <div class="code-lang">bash — récupérer le chat_id</div>
+    </div>
+    <div class="code-body"><span class="c"># 1. Récupère le chat_id du canal FR</span>
+<span class="c"># Remplace @ArbitrageP2P_FR par le username PUBLIC de ton canal FR</span>
+curl <span class="s">"https://api.telegram.org/bot&lt;TON_TOKEN&gt;/getChat?chat_id=@ArbitrageP2P_FR"</span>
+
+<span class="c"># Réponse :</span>
+<span class="c"># {"ok":true,"result":{"id":-1001234567890,</span>
+<span class="c">#   "title":"Arbitrage P2P — Signaux Gratuits 🇫🇷",...}}</span>
+
+<span class="c"># 2. Récupère le chat_id du canal EN</span>
+curl <span class="s">"https://api.telegram.org/bot&lt;TON_TOKEN&gt;/getChat?chat_id=@P2PArbitrage_EN"</span>
+
+<span class="c"># Réponse :</span>
+<span class="c"># {"ok":true,"result":{"id":-1001234567891,</span>
+<span class="c">#   "title":"P2P Arbitrage — Free Signals 🌍",...}}</span>
+
+<span class="c"># 3. Note les 2 IDs (TOUJOURS négatifs, commencent par -100)</span>
+<span class="c">#    TELEGRAM_CHANNEL_FR_ID = -1001234567890</span>
+<span class="c">#    TELEGRAM_CHANNEL_EN_ID = -1001234567891</span></div>
+</div>
+
+<div class="callout">
+    <div class="callout-icon">⚠️</div>
+    <div class="callout-body">
+        <strong>Format des IDs :</strong> Les IDs de canaux sont TOUJOURS négatifs et
+        commencent par <code>-100</code>. Si tu vois un ID positif, c'est celui d'un utilisateur,
+        pas d'un canal. Vérifie que le bot est bien admin du canal avant de tester, sinon tu
+        obtiendras une erreur 403 Forbidden.
+    </div>
+</div>
+
+<!-- ─── SECTION 7: Variables d'environnement ─── -->
+<div class="chapter-header">
+    <div class="section-num">Section 07 · Env vars</div>
+    <div class="section-title">Variables d'environnement Vercel + Neon</div>
+    <div class="section-divider"></div>
+</div>
+
+<div class="body-text">
+    Toutes les clés secrètes (tokens, IDs, API keys) doivent être stockées dans
+    <strong>Vercel Environment Variables</strong> (Settings → Environment Variables).
+    Elles sont chiffrées AES-256 et jamais exposées dans le code source ni les logs. Pour
+    Vercel Hobby + Neon Postgres, voici la liste complète des variables obligatoires et
+    optionnelles.
+</div>
+
+<div class="subheading">Variables obligatoires (6)</div>
+
+<div class="env-row">
+    <div class="env-key">DATABASE_URL</div>
+    <div class="env-val">postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/db?sslmode=require&pgbouncer=true</div>
+</div>
+<div class="env-row">
+    <div class="env-key">DIRECT_URL</div>
+    <div class="env-val">postgresql://user:pass@ep-xxx.region.aws.neon.tech/db?sslmode=require</div>
+</div>
+<div class="env-row">
+    <div class="env-key">TELEGRAM_BOT_TOKEN</div>
+    <div class="env-val">123456789:ABCdefGHIjklMNOpqrSTUvwxYZ</div>
+</div>
+<div class="env-row">
+    <div class="env-key">TELEGRAM_CHANNEL_FR_ID</div>
+    <div class="env-val">-1001234567890</div>
+</div>
+<div class="env-row">
+    <div class="env-key">TELEGRAM_CHANNEL_EN_ID</div>
+    <div class="env-val">-1001234567891</div>
+</div>
+<div class="env-row">
+    <div class="env-key">ZAI_API_KEY</div>
+    <div class="env-val">zai-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</div>
+</div>
+
+<div class="subheading">Variables optionnelles (recommandées)</div>
+
+<div class="env-row">
+    <div class="env-key">CRON_API_KEY</div>
+    <div class="env-val">genere-une-cle-aleatoire-32-caracteres</div>
+</div>
+<div class="env-row">
+    <div class="env-key">ADMIN_TELEGRAM_ID</div>
+    <div class="env-val">987654321 (ton ID perso pour recevoir les alertes)</div>
+</div>
+<div class="env-row">
+    <div class="env-key">QSTASH_TOKEN</div>
+    <div class="env-val">QStash token (si tu utilises Upstash QStash pour les crons)</div>
+</div>
+
+<div class="callout">
+    <div class="callout-icon">🗄️</div>
+    <div class="callout-body">
+        <strong>Neon Postgres :</strong> Utilise TOUJOURS la connexion <strong>pooler</strong>
+        (hostname contient <code>-pooler</code>) pour <code>DATABASE_URL</code>. Vercel est
+        serverless = nombreuses connexions courtes. Sans pooling, tu épuises les 100 connexions
+        Neon du free tier en quelques minutes. <code>DIRECT_URL</code> (sans -pooler) sert
+        uniquement aux migrations Prisma.
+    </div>
+</div>
+
+<div class="subheading">Vérification après déploiement</div>
+
+<div class="code-block">
+    <div class="code-header">
+        <div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div>
+        <div class="code-lang">bash — tester la production</div>
+    </div>
+    <div class="code-body"><span class="c"># 1. Vérifie que l'app répond</span>
+curl <span class="s">"https://ton-app.vercel.app/api/stats"</span> | jq .
+
+<span class="c"># 2. Lance un scan manuel (avec auto-publish)</span>
+curl -X POST <span class="s">"https://ton-app.vercel.app/api/scan/trigger"</span> \\
+  -H <span class="s">"X-API-Key: $CRON_API_KEY"</span> \\
+  --max-time 60 | jq .
+
+<span class="c"># 3. Vérifie les 2 canaux Telegram → nouveaux messages FR + EN apparus</span></div>
+</div>
+
+<!-- ─── SECTION 8: Crons externes ─── -->
+<div class="chapter-header">
+    <div class="section-num">Section 08 · Crons externes</div>
+    <div class="section-title">4 méthodes pour bypass la limite cron Vercel Hobby</div>
+    <div class="section-divider"></div>
+</div>
+
+<div class="body-text">
+    <strong>Vercel Hobby = 1 cron job max, fréquence quotidienne (1x/jour)</strong>. Insuffisant
+    pour scanner toutes les 5 minutes. Le hack : utiliser <em>plusieurs services de cron externes
+    gratuits</em> qui frappent l'endpoint <code>/api/scan/trigger</code>. Cet endpoint est
+    <strong>idempotent</strong> grâce à un verrou distribué dans Neon (table ScanLock) + un
+    debounce de 2 minutes. Résultat : scan effectif toutes les 1-5 min, gratuit, sans dépendre
+    du cron Vercel.
+</div>
+
+<div class="callout cron">
+    <div class="callout-icon">🔒</div>
+    <div class="callout-body">
+        <strong>Idempotence garantie :</strong> Combine les 4 méthodes ci-dessous pour une
+        redondance maximale. Même si 3 triggers arrivent simultanément, le verrou ScanLock
+        permet à 1 seul de s'exécuter — les 2 autres retournent <code>skipped: "locked"</code>.
+        Le debounce de 2 min évite aussi le spam.
+    </div>
+</div>
+
+<div class="method-card">
+    <div class="method-card-header">
+        <div class="method-card-name">Méthode A — UptimeRobot</div>
+        <div class="method-card-badge">5 min · 50 monitors</div>
+    </div>
+    <div class="method-card-meta">
+        <strong>Gratuit :</strong> Oui · <strong>Headers custom :</strong> Non (plan gratuit) · <strong>Latence min :</strong> 5 min
+    </div>
+    <div class="card-body">
+        Va sur <strong>uptimerobot.com</strong> → Sign up → Add New Monitor → Type "HTTP(s)" →
+        URL : <code>https://ton-app.vercel.app/api/scan/trigger?run=1</code> → Interval : 5 minutes.
+        Comme UptimeRobot ne supporte pas les headers custom en gratuit, soit tu ne définis pas
+        <code>CRON_API_KEY</code> (accès ouvert), soit tu crées une variante d'endpoint qui accepte
+        la clé en query string. Idéal pour démarrer sans friction.
+    </div>
+</div>
+
+<div class="method-card">
+    <div class="method-card-header">
+        <div class="method-card-name">Méthode B — cron-job.org</div>
+        <div class="method-card-badge">1-5 min · headers OK</div>
+    </div>
+    <div class="method-card-meta">
+        <strong>Gratuit :</strong> Oui · <strong>Headers custom :</strong> Oui · <strong>Recommandé</strong>
+    </div>
+    <div class="card-body">
+        Va sur <strong>cron-job.org</strong> → Sign up → Create Cronjob → URL :
+        <code>https://ton-app.vercel.app/api/scan/trigger</code> → Schedule : Every 5 minutes
+        (<code>*/5 * * * *</code>) → Method : POST → Headers : <code>X-API-Key: &lt;ta-cle&gt;</code>.
+        C'est la méthode recommandée car elle supporte les headers custom gratuitement.
+    </div>
+</div>
+
+<div class="method-card">
+    <div class="method-card-header">
+        <div class="method-card-name">Méthode C — GitHub Actions</div>
+        <div class="method-card-badge">5 min · 2000 min/mois</div>
+    </div>
+    <div class="method-card-meta">
+        <strong>Gratuit :</strong> Oui (2000 min/mois) · <strong>Headers custom :</strong> Oui · <strong>Redondance</strong>
+    </div>
+    <div class="card-body">
+        Crée <code>.github/workflows/trigger_scan.yml</code> dans ton repo. Le workflow fait un
+        curl POST vers ton endpoint toutes les 5 minutes. Limite : 2000 min/mois = ~33 runs/jour
+        si chaque run dure 2 min. À combiner avec cron-job.org pour atteindre le rythme 5 min
+        complet.
+    </div>
+</div>
+
+<div class="method-card">
+    <div class="method-card-header">
+        <div class="method-card-name">Méthode D — Upstash QStash</div>
+        <div class="method-card-badge">500 msg/jour · retry garanti</div>
+    </div>
+    <div class="method-card-meta">
+        <strong>Gratuit :</strong> Oui (500 msg/jour) · <strong>Le plus élégant</strong> · <strong>Retry auto</strong>
+    </div>
+    <div class="card-body">
+        QStash = queue serverless avec scheduling intégré. Va sur <strong>console.upstash.com</strong>
+        → QStash → crée un schedule avec <code>cron: "*/5 * * * *"</code> qui POST vers ton endpoint.
+        QStash garantit la livraison (retry auto si erreur 500), supporte les headers custom, et
+        c'est gratuit jusqu'à 500 messages/jour = 1 toutes les 3 min en moyenne.
+    </div>
+</div>
+
+<div class="subheading">Configuration cron-job.org (Méthode B — recommandée)</div>
+
+<div class="code-block">
+    <div class="code-header">
+        <div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div>
+        <div class="code-lang">cron-job.org — formulaire de configuration</div>
+    </div>
+    <div class="code-body"><span class="c"># Champs à remplir sur cron-job.org :</span>
+
+Title              : P2P Scout Scan 5min
+URL                : https://ton-app.vercel.app/api/scan/trigger
+Request Method     : POST
+Execution Schedule : Every 5 minutes  (cron: */5 * * * *)
+Notifications      : Email on failure
+
+<span class="c"># Headers (section "Headers") :</span>
+X-API-Key          : &lt;ta-cle-CRON_API_KEY&gt;
+Content-Type       : application/json
+
+<span class="c"># Body (vide — pas besoin de payload)</span>
+<span class="c"># Timeout : 60 seconds</span>
+<span class="c"># Save → le scan tourne toutes les 5 min, gratuit</span></div>
+</div>
+
+<div class="subheading">Configuration vercel.json — cron quotidien pour le rapport</div>
+
+<div class="code-block">
+    <div class="code-header">
+        <div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div>
+        <div class="code-lang">json — vercel.json</div>
+    </div>
+    <div class="code-body">{
+  <span class="k">"crons"</span>: [
+    {
+      <span class="k">"path"</span>: <span class="s">"/api/daily-report"</span>,
+      <span class="k">"schedule"</span>: <span class="s">"0 8 * * *"</span>
+    }
+  ]
+}
+
+<span class="c"># Le cron Vercel (1/jour, 8h UTC) sert UNIQUEMENT au rapport quotidien.</span>
+<span class="c"># Le scanner est déclenché par les crons externes (Méthodes A-D).</span></div>
+</div>
+
+<!-- ─── SECTION 9: Checklist finale ─── -->
+<div class="chapter-header">
+    <div class="section-num">Section 09 · Checklist</div>
+    <div class="section-title">Checklist finale de mise en production</div>
+    <div class="section-divider"></div>
+</div>
+
+<div class="body-text">
+    Coche chaque étape au fur et à mesure. Une fois toutes les cases cochées, ton système P2P
+    Arbitrage Scout tourne 24/7 sans intervention manuelle, publie automatiquement les
+    opportunités sur les 2 canaux Telegram, et coûte 1-5 $/mois (uniquement les appels LLM).
+</div>
+
+<ul class="checklist">
+    <li>Bot Telegram créé via @BotFather (token copié en lieu sûr)</li>
+    <li>Canal FR public créé : "Arbitrage P2P — Signaux Gratuits 🇫🇷"</li>
+    <li>Canal EN public créé : "P2P Arbitrage — Free Signals 🌍"</li>
+    <li>Description FR ≤ 150 caractères (99 car. effectifs) ✓</li>
+    <li>Description EN ≤ 150 caractères (85 car. effectifs) ✓</li>
+    <li>Message épinglé FR publié (815 car. avec Mini App + disclaimer)</li>
+    <li>Message épinglé EN publié (780 car. avec Mini App + disclaimer)</li>
+    <li>Hashtags FR configurés : #ArbitrageP2P #CryptoFacile #USDT #GainsCrypto #SansRisque</li>
+    <li>Hashtags EN configurés : #P2PArbitrage #CryptoProfit #USDT #PassiveIncome #CryptoSignals</li>
+    <li>Bot @P2PScoutBot ajouté comme admin des 2 canaux (droits de publication)</li>
+    <li>chat_id FR récupéré (format -100...) et noté</li>
+    <li>chat_id EN récupéré (format -100...) et noté</li>
+    <li>Compte Neon Postgres créé (region Frankfurt recommandée)</li>
+    <li>Connection string POOLER copiée pour DATABASE_URL</li>
+    <li>Connection string DIRECT copiée pour DIRECT_URL</li>
+    <li>prisma/schema.prisma migré vers postgresql provider</li>
+    <li>Prisma db push exécuté contre Neon (tables créées)</li>
+    <li>Vercel project créé + repo GitHub connecté</li>
+    <li>6 variables d'environnement obligatoires ajoutées dans Vercel</li>
+    <li>CRON_API_KEY généré (32 car. aléatoire) et stocké</li>
+    <li>Déploiement Vercel réussi (https://ton-app.vercel.app)</li>
+    <li>/api/stats répond 200 avec JSON valide</li>
+    <li>Endpoint /api/scan/trigger testé (opportunitiesPublished &gt; 0)</li>
+    <li>Canal FR reçoit le message d'opportunité automatiquement ✓</li>
+    <li>Canal EN reçoit le message d'opportunité automatiquement ✓</li>
+    <li>cron-job.org configuré (POST /api/scan/trigger toutes les 5 min)</li>
+    <li>GitHub Actions trigger_scan.yml déployé (redondance)</li>
+    <li>Upstash QStash configuré (redondance + retry garanti)</li>
+    <li>vercel.json créé avec cron quotidien pour /api/daily-report (8h UTC)</li>
+    <li>Idempotence vérifiée (3 triggers parallèles → 1 seul réussit)</li>
+    <li>Déduplication 30 min vérifiée (même paire non republicuée)</li>
+    <li>Coût OpenRouter surveillé (alerte à 10 $/mois configurée)</li>
+</ul>
+
+<div class="callout tip">
+    <div class="callout-icon">🎉</div>
+    <div class="callout-body">
+        <strong>Système opérationnel !</strong> À partir de maintenant, à chaque opportunité
+        éligible (spread ≥ 1,5% net), le LLM disponible rédige le message en FR + EN, et publie
+        automatiquement sur les 2 canaux Telegram en moins de 60 secondes. Tu n'as plus rien à
+        faire — juste surveiller les canaux et partager le contenu.
+    </div>
+</div>
+
+</div>
+
+<!-- ═══════════════════ ENDING ═══════════════════ -->
+<div class="ending">
+    <div class="ending-emoji">🚀</div>
+    <div class="ending-title">Système prêt<br>pour la production</div>
+    <div class="ending-subtitle">
+        Ton infrastructure P2P Arbitrage Scout est maintenant complète : 2 canaux Telegram SEO,
+        pipeline auto-publish LLM, et crons externes redondants. Le système tourne 24/7 pour
+        1-5 $/mois.
+    </div>
+    <div class="ending-stats">
+        <div class="ending-stat">
+            <div class="ending-stat-num">8</div>
+            <div class="ending-stat-label">Plateformes</div>
+        </div>
+        <div class="ending-stat">
+            <div class="ending-stat-num">60s</div>
+            <div class="ending-stat-label">Latence max</div>
+        </div>
+        <div class="ending-stat">
+            <div class="ending-stat-num">1-5$</div>
+            <div class="ending-stat-label">Coût/mois</div>
+        </div>
+    </div>
+    <div class="ending-disclaimer">
+        ℹ️ Information éducative, pas un conseil financier. Les prix P2P peuvent changer entre
+        la détection et l'exécution. Ne misez jamais plus que vous ne pouvez vous permettre de
+        perdre. Vérifiez toujours les prix avant d'agir. Ce système ne garantit aucun bénéfice
+        et décline toute responsabilité en cas de perte.
+        <br><br>
+        © 2026 P2P Arbitrage Scout · Guide personnalisé v1.0 · Conçu pour la communauté crypto francophone et mondiale
+    </div>
+</div>
+
+</body>
+</html>

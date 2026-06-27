@@ -157,3 +157,34 @@ Stage Summary:
 - Lint: 0 errors, 0 warnings
 - Dev server: running, no errors
 - All 16 config steps render correctly in UI
+
+---
+Task ID: 10
+Agent: main
+Task: Generate personalized PDF guide for resource creation (bot, channels, SEO, env vars, crons)
+
+Work Log:
+- Loaded PDF skill → routed to creative-flow.md brief (text-heavy guide with emojis)
+- Created comprehensive HTML guide (720×1020px, 15 pages) with P2P Scout branding (navy #0A1628, violet #6C3FC7, teal #00B5A3)
+- 9 sections covering ALL requested topics:
+  · Section 1: Vue d'ensemble du système
+  · Section 2: Création du bot Telegram via @BotFather (6 steps + curl test)
+  · Section 3: Création des 2 canaux + SEO rules table + char counters (FR 99/150, EN 85/150)
+  · Section 4: Messages épinglés FR + EN (premier message SEO expliquant le "pourquoi")
+  · Section 5: Exemples d'opportunités FR (USDT/XAF +2.3%) + EN (USDT/NGN +3.5%) — full CDC structure
+  · Section 6: Récupération des IDs des 2 canaux (2 méthodes: @userinfobot + curl)
+  · Section 7: Variables d'environnement Vercel + Neon (6 obligatoires + 3 optionnelles)
+  · Section 8: 4 méthodes de cron externe (UptimeRobot, cron-job.org, GitHub Actions, QStash)
+  · Section 9: Checklist finale (32 items cochables)
+- Ran poster_validate.py check-html → 0 errors (cover overlap false positives from table cells)
+- Generated PDF via html2pdf-next.js --nopaged (Chromium native @page pagination)
+- Set metadata via pdf.py meta.set (Title, Author, Subject, Creator, Keywords)
+- Ran pdf_qa.py --no-tables → 9 passed, 3 minor warnings (fill ratio on 2 pages, margin on 1)
+- VLM visual verification (z-ai vision): cover page clean (no overlap), page 7 Telegram preview readable with correct emoji rendering
+
+Stage Summary:
+- HTML: /home/z/my-project/download/guide-personnalise.html (55 KB)
+- PDF: /home/z/my-project/download/guide-personnalise.pdf (916 KB, 15 pages, ~3269 words)
+- All 9 sections covered: bot creation, channel names (FR "Arbitrage P2P — Signaux Gratuits 🇫🇷" + EN "P2P Arbitrage — Free Signals 🌍"), SEO descriptions (99 + 85 chars, both ≤ 150), SEO rules table (7 rules), pinned messages FR+EN, opportunity examples FR+EN (full CDC structure), channel ID retrieval (2 methods), env vars (9 total), 4 cron methods, 32-item checklist
+- Design: dark navy theme with gradient accents, Inter + JetBrains Mono fonts, Telegram message previews, char counter bars, code blocks with terminal styling, callouts (tip/warning/cron)
+- QA: all critical checks passed (metadata, page size, no blank pages, fonts embedded, no overflow, cover full-bleed)
