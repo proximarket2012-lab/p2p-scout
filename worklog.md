@@ -328,3 +328,26 @@ Stage Summary:
 - UptimeRobot GET trigger supported (?run=1)
 - Error messages now helpful (no more silent 500s)
 - User needs to: set Neon env vars on Vercel + run prisma db push + seed
+
+---
+Task ID: 14
+Agent: main
+Task: Configure Neon Postgres + create tables + seed data
+
+Work Log:
+- User provided Neon connection strings (pooler + unpooled)
+- Wrote local .env with:
+  · DATABASE_URL = pooler connection + &pgbouncer=true (REQUIRED for Prisma on Neon pooler)
+  · DIRECT_URL = unpooled connection (for migrations)
+- Ran `bun run db:push` → 7 tables created on Neon in 11.8s (Platform, TradingPair, LlmModel, Opportunity, Channel, ScanLog, SystemSetting, ScanLock)
+- Fixed seed script env loading:
+  · Initial attempt: import { config } from "dotenv"; config() → failed (ESM hoisting: db.ts PrismaClient created before config() runs)
+  · Second attempt: import "dotenv/config" → still failed (bun auto-loads .env but DATABASE_URL was in shell env from killed dev server, dotenv doesn't override existing env vars)
+  · Final solution: pass DATABASE_URL + DIRECT_URL explicitly as shell env vars when running bun → SUCCESS
+- Seeded Neon with: 8 platforms, 10 free OpenRouter LLMs, 10 trading pairs, 2 SEO channels (FR+EN), 28 opportunities, 24 scan logs, 5 system settings
+- Verified via direct Prisma query: Platforms=8, LLMs=10, Channels=2, Opportunities=28 ✓
+
+Stage Summary:
+- Neon Postgres is LIVE with all tables + seed data
+- User needs to add env vars on Vercel dashboard (DATABASE_URL pooler + DIRECT_URL unpooled)
+- After Vercel redeploy, /api/stats will return real data instead of "table does not exist" error

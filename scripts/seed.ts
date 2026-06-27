@@ -1,3 +1,7 @@
+// Load .env before importing db — use bun's --env-file flag OR dotenv/config import
+// The "dotenv/config" import side-effect runs BEFORE other imports (ESM hoisting)
+import "dotenv/config";
+
 import { db } from "../src/lib/db";
 
 // ─────────────────────────────────────────────────────────────
