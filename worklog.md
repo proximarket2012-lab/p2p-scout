@@ -279,3 +279,52 @@ Stage Summary:
 - ✅ .env.example template provided for new developers
 - ✅ README.md + GitHub Actions workflow included
 - ⚠️ SECURITY: User shared PAT token (ghp_9LbW...) in plain text — MUST revoke at https://github.com/settings/tokens immediately
+
+---
+Task ID: 13
+Agent: main
+Task: Fix Vercel deployment — Neon Postgres + UptimeRobot GET trigger + error handling
+
+Work Log:
+- User deployed to Vercel: https://p2p-scout-yt8i.vercel.app/
+- User configuring UptimeRobot (Method A cron bypass) — screenshot showed onboarding step 1
+- Diagnosed Vercel issues:
+  · /api/stats → HTTP 500 (empty body, no error info)
+  · /api/llms → HTTP 500 (empty body)
+  · /api/scan/trigger GET → 200 but only health check (UptimeRobot does GET, can't trigger scan)
+  · Root cause: SQLite doesn't work on Vercel (read-only FS) + tables don't exist on Neon
+
+FIXES APPLIED:
+1. Switched prisma/schema.prisma: provider sqlite → postgresql + added directUrl
+2. Updated next.config.ts: removed output: "standalone" (Vercel handles natively)
+3. Updated package.json:
+   · Added "postinstall": "prisma generate" (runs on Vercel build)
+   · Simplified build/start scripts for Vercel
+   · Renamed to p2p-arbitrage-scout v1.0.0
+   · Added "seed" script
+4. Rewrote /api/scan/trigger:
+   · GET ?run=1 → triggers actual scan (UptimeRobot compatible!)
+   · GET (no param) → health check only
+   · POST → triggers scan (cron-job.org/GitHub Actions/QStash)
+   · Auth via ?key=CRON_API_KEY (GET) or X-API-Key header (POST)
+5. Added try-catch to 6 API routes (stats, llms, platforms, pairs, channels, opportunities):
+   · Returns helpful JSON error with detail + hint instead of empty 500
+6. Updated .env.example: Neon Postgres for BOTH dev and prod (SQLite removed)
+
+PUSHED to GitHub → Vercel auto-rebuilt:
+- /api/scan/trigger GET now shows 3 methods (POST, GET ?run=1, GET health check)
+- /api/stats now returns: "Database connection failed — The table public.Opportunity does not exist"
+- Confirms: Neon IS connected (Prisma can reach it) but tables need to be created
+
+REMAINING (user action required):
+1. Create Neon Postgres project (if not done)
+2. Set env vars on Vercel: DATABASE_URL (pooler) + DIRECT_URL (direct)
+3. Run `prisma db push` against Neon to create tables
+4. Run `bun run scripts/seed.ts` against Neon to populate data
+5. Configure UptimeRobot: URL = https://p2p-scout-yt8i.vercel.app/api/scan/trigger?run=1
+
+Stage Summary:
+- Vercel deployment fixed (code side)
+- UptimeRobot GET trigger supported (?run=1)
+- Error messages now helpful (no more silent 500s)
+- User needs to: set Neon env vars on Vercel + run prisma db push + seed
