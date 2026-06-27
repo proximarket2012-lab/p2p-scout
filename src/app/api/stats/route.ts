@@ -5,6 +5,25 @@ export const dynamic = "force-dynamic";
 
 // GET /api/stats — dashboard statistics
 export async function GET() {
+  try {
+    return await getStats();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown DB error";
+    console.error("[/api/stats] error:", message);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Database connection failed",
+        detail: message,
+        hint: "Ensure DATABASE_URL + DIRECT_URL env vars are set (Neon Postgres pooler connection). See .env.example",
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 }
+    );
+  }
+}
+
+async function getStats() {
   const [
     activeCount,
     publishedCount,

@@ -5,8 +5,22 @@ export const dynamic = "force-dynamic";
 
 // GET /api/llms — list all LLMs in rotation (10 models)
 export async function GET() {
-  const llms = await db.llmModel.findMany({
-    orderBy: { priority: "asc" },
-  });
-  return NextResponse.json({ llms });
+  try {
+    const llms = await db.llmModel.findMany({
+      orderBy: { priority: "asc" },
+    });
+    return NextResponse.json({ llms });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown DB error";
+    console.error("[/api/llms] error:", message);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Database connection failed",
+        detail: message,
+        hint: "Ensure DATABASE_URL + DIRECT_URL env vars are set (Neon Postgres). See .env.example",
+      },
+      { status: 500 }
+    );
+  }
 }

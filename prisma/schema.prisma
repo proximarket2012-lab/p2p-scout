@@ -1,13 +1,16 @@
 // P2P Arbitrage Scout — Prisma schema
 // CDC v1.0 — June 2026
+// Production: Neon Postgres (serverless, free tier 0.5GB)
+// Dev: can use local Postgres OR Neon (same connection string works for both)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")      // Pooler connection (PgBouncer) — for app queries
+  directUrl = env("DIRECT_URL")        // Direct connection — for migrations only
 }
 
 model Platform {
