@@ -1,0 +1,44 @@
+name: Trigger P2P Scan
+
+# Cron externe (Méthode C du guide) — contourne la limite Vercel Hobby (1 cron/jour)
+# en frappant l'endpoint /api/scan/trigger qui est idempotent (verrou ScanLock + debounce 2 min).
+# Combine avec cron-job.org (Méthode B) et QStash (Méthode D) pour redondance maximale.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # toutes les 5 minutes
+  workflow_dispatch: {}     # déclenchement manuel
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Hit Vercel scan endpoint
+        env:
+          VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
+          CRON_API_KEY: ${{ secrets.CRON_API_KEY }}
+        run: |
+          echo "🔄 Triggering P2P scan at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${VERCEL_APP_URL}/api/scan/trigger" \
+            -H "X-API-Key: ${CRON_API_KEY}" \
+            -H "Content-Type: application/json" \
+            --max-time 90)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response: $BODY"
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Scan triggered successfully"
+          else
+            echo "❌ Scan trigger failed (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+# ─────────────────────────────────────────────────────────────
+# LIMITES GitHub Free : 2000 min/mois
+# 2 min/run × 288 runs/jour × 30 jours = 17 280 min ❌ DÉPASSE
+# Solution : utilise cron-job.org (Méthode B) en PRIMAIRE
+# et GitHub Actions (Méthode C) en BACKUP (désactive ce cron
+# si tu dépasses le quota, ou passe le schedule à "0 */6 * * *" = 4×/jour)
+# ─────────────────────────────────────────────────────────────
