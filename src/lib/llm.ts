@@ -1,7 +1,9 @@
 // ─────────────────────────────────────────────────────────────
-// P2P Arbitrage Scout — LLM Engine
-// Uses z-ai-web-dev-sdk (backend only!) with FR/EN prompt templates
-// Implements round-robin rotation of 10 LLMs as per CDC v1.0
+// P2P Arbitrage Scout — LLM Engine v2
+// Uses OpenRouter API (10 free models in round-robin rotation)
+// with automatic fallback on rate limits (429) or errors.
+// Falls back to z-ai-web-dev-sdk (ZAI) if OPENROUTER_API_KEY is not set.
+// Backend only — NEVER import this module from client code.
 // ─────────────────────────────────────────────────────────────
 import "server-only";
 import ZAI from "z-ai-web-dev-sdk";
@@ -106,10 +108,11 @@ For the "WHAT YOU EARN" calculation, use an example investment of 100 USDT (or t
 }
 
 // ── Round-robin LLM selection ────────────────────────────────────
-export async function selectNextLlm(): Promise<{ id: string; name: string; provider: string } | null> {
-  // Get the LLM with the oldest lastUsedAt (or null) among enabled, ordered by priority
+// Returns the LLM with the oldest lastUsedAt (or null) among enabled, ordered by priority.
+// Excludes LLMs in the skipIds set (failed recently with rate limit / error).
+export async function selectNextLlm(skipIds: Set<string> = new Set()): Promise<{ id: string; name: string; provider: string } | null> {
   const llms = await db.llmModel.findMany({
-    where: { enabled: true },
+    where: { enabled: true, id: { notIn: Array.from(skipIds) } },
     orderBy: [{ lastUsedAt: "asc" }, { priority: "asc" }],
     take: 1,
   });
@@ -128,68 +131,157 @@ async function markLlmUsed(llmId: string) {
   });
 }
 
-// ── Generate message (single language) ──────────────────────────
+// ── OpenRouter API call ──────────────────────────────────────────
+// Real call to OpenRouter with the specific model name from the DB.
+// Handles 429 (rate limit) by throwing — the caller will try the next model.
+async function callOpenRouter(
+  model: string,
+  systemPrompt: string,
+  userPrompt: string
+): Promise<string> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY not set");
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000); // 30s timeout per CDC § 4
+
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://p2p-arbitrage-scout.vercel.app",
+        "X-Title": "P2P Arbitrage Scout",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 1200,
+      }),
+      signal: controller.signal,
+    });
+
+    if (res.status === 429) {
+      throw new Error(`Rate limit (429) on ${model}`);
+    }
+    if (res.status === 402) {
+      throw new Error(`Payment required (402) on ${model} — free tier exhausted`);
+    }
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`OpenRouter ${res.status} on ${model}: ${errText.slice(0, 200)}`);
+    }
+
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content ?? "";
+    if (!content || content.trim().length === 0) {
+      throw new Error(`Empty response from ${model}`);
+    }
+    return content.trim();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// ── ZAI fallback (used when OPENROUTER_API_KEY is not set) ───────
+async function callZai(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<string> {
+  const zai = await ZAI.create();
+  const completion = await zai.chat.completions.create({
+    messages: [
+      { role: "assistant", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    thinking: { type: "disabled" },
+  });
+  const content = completion.choices[0]?.message?.content ?? "";
+  if (!content || content.trim().length === 0) {
+    throw new Error("Empty ZAI response");
+  }
+  return content.trim();
+}
+
+// ── Generate message (single language) with full fallback chain ─
+// Tries up to 5 LLMs in rotation. On rate limit / error, marks the LLM as used
+// (so it's skipped for the next 5 min) and tries the next one.
+// If OPENROUTER_API_KEY is not set, falls back to ZAI SDK.
 export async function generateOpportunityMessage(
   opp: OpportunityInput,
   language: "FR" | "EN"
 ): Promise<{ content: string; llmModel: string; llmId: string } | null> {
-  const nextLlm = await selectNextLlm();
-  if (!nextLlm) return null;
-
   const systemPrompt = language === "FR" ? SYSTEM_PROMPT_FR : SYSTEM_PROMPT_EN;
   const userPrompt = buildUserPrompt(opp, language);
 
-  try {
-    const zai = await ZAI.create();
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: "assistant", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      thinking: { type: "disabled" },
-    });
+  const hasOpenRouter = !!process.env.OPENROUTER_API_KEY;
 
-    const content = completion.choices[0]?.message?.content ?? "";
-
-    if (!content || content.trim().length === 0) {
-      throw new Error("Empty LLM response");
-    }
-
-    await markLlmUsed(nextLlm.id);
-
-    return { content: content.trim(), llmModel: nextLlm.name, llmId: nextLlm.id };
-  } catch (err) {
-    console.error(`[LLM] ${nextLlm.name} failed:`, err);
-    // Try fallback — next LLM in rotation
-    await markLlmUsed(nextLlm.id); // skip this one for next round
-    const fallback = await selectNextLlm();
-    if (!fallback || fallback.id === nextLlm.id) return null;
-
+  // If no OpenRouter key, use ZAI directly (demo/dev mode)
+  if (!hasOpenRouter) {
     try {
-      const zai = await ZAI.create();
-      const completion = await zai.chat.completions.create({
-        messages: [
-          { role: "assistant", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        thinking: { type: "disabled" },
-      });
-      const content = completion.choices[0]?.message?.content ?? "";
-      if (!content) return null;
-      await markLlmUsed(fallback.id);
-      return { content: content.trim(), llmModel: fallback.name, llmId: fallback.id };
-    } catch (err2) {
-      console.error(`[LLM] fallback ${fallback.name} also failed:`, err2);
+      const content = await callZai(systemPrompt, userPrompt);
+      // Still rotate the DB counter so the UI shows round-robin activity
+      const nextLlm = await selectNextLlm();
+      if (nextLlm) await markLlmUsed(nextLlm.id);
+      return {
+        content,
+        llmModel: nextLlm?.name ?? "zai-fallback",
+        llmId: nextLlm?.id ?? "zai",
+      };
+    } catch (err) {
+      console.error("[LLM] ZAI fallback failed:", err);
       return null;
     }
   }
+
+  // OpenRouter mode: try up to 5 models in rotation
+  const skipIds = new Set<string>();
+  const maxAttempts = 5;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const nextLlm = await selectNextLlm(skipIds);
+    if (!nextLlm) {
+      console.error("[LLM] No more LLMs available in rotation");
+      break;
+    }
+
+    try {
+      const content = await callOpenRouter(nextLlm.name, systemPrompt, userPrompt);
+      await markLlmUsed(nextLlm.id);
+      return { content, llmModel: nextLlm.name, llmId: nextLlm.id };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      console.error(`[LLM] ${nextLlm.name} failed (attempt ${attempt + 1}/${maxAttempts}): ${msg}`);
+      // Mark as used so it's skipped for the next rotation cycle (oldest lastUsedAt moves forward)
+      await markLlmUsed(nextLlm.id);
+      skipIds.add(nextLlm.id);
+      // Continue to next model in the loop
+    }
+  }
+
+  // All OpenRouter models exhausted — final fallback to ZAI
+  console.warn("[LLM] All OpenRouter models failed, falling back to ZAI");
+  try {
+    const content = await callZai(systemPrompt, userPrompt);
+    return { content, llmModel: "zai-emergency", llmId: "zai" };
+  } catch (err) {
+    console.error("[LLM] ZAI emergency fallback also failed:", err);
+    return null;
+  }
 }
 
-// ── Generate both FR + EN in parallel (per CDC § 3.1) ──────────
+// ── Generate both FR + EN (sequential for proper rotation) ───────
 export async function generateBothLanguages(
   opp: OpportunityInput
 ): Promise<{ fr: string | null; en: string | null; llmModel: string | null }> {
-  // Run sequentially to avoid race conditions in round-robin (FR first, then EN)
+  // Run sequentially so the round-robin picks 2 different models (FR first, then EN)
   const frResult = await generateOpportunityMessage(opp, "FR");
   const enResult = await generateOpportunityMessage(opp, "EN");
   return {

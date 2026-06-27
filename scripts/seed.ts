@@ -29,17 +29,19 @@ const PAIRS = [
   { symbol: "BTC/USDT", type: "Crypto/Stablecoin", justification: "Spreads inter-plateformes sur les gros ordres", risk: "MEDIUM", riskEmoji: "🟡", region: "Global", quoteAsset: "USDT" },
 ];
 
+// 10 LLMs GRATUITS d'OpenRouter (rotation round-robin + fallback automatique sur rate limit)
+// Tous à 0 $/1K tokens (free tier) — le système coûte 0 $/mois en LLM
 const LLMS = [
-  { name: "claude-haiku-4-5", provider: "Anthropic (OpenRouter)", strengths: "Rapide, structuré, excellent FR", languageFit: "FR + EN", costPer1k: 0.00025, priority: 1 },
-  { name: "gemini-2.5-flash", provider: "Google (OpenRouter)", strengths: "Très rapide, bon multilingue", languageFit: "FR + EN", costPer1k: 0.00030, priority: 2 },
-  { name: "gpt-4o-mini", provider: "OpenAI (OpenRouter)", strengths: "Fiable, bon EN, accessible", languageFit: "EN > FR", costPer1k: 0.00015, priority: 3 },
-  { name: "llama-3.3-70b", provider: "Meta (OpenRouter)", strengths: "Open source, bon FR Afrique", languageFit: "FR + EN", costPer1k: 0.00020, priority: 4 },
-  { name: "mistral-small-3.1", provider: "Mistral (OpenRouter)", strengths: "Natif français, précis, rapide", languageFit: "FR ★", costPer1k: 0.00020, priority: 5 },
-  { name: "qwen-2.5-72b", provider: "Alibaba (OpenRouter)", strengths: "Fort en Asie, bon multilingue", languageFit: "EN > FR", costPer1k: 0.00010, priority: 6 },
-  { name: "deepseek-chat-v3", provider: "DeepSeek (OpenRouter)", strengths: "Rapport qualité/coût excellent", languageFit: "EN + FR", costPer1k: 0.00014, priority: 7 },
-  { name: "phi-4-mini", provider: "Microsoft (OpenRouter)", strengths: "Ultra-rapide, faible latence", languageFit: "EN", costPer1k: 0.00010, priority: 8 },
-  { name: "gemma-3-27b", provider: "Google (OpenRouter)", strengths: "Backup Google, bon équilibre", languageFit: "FR + EN", costPer1k: 0.00015, priority: 9 },
-  { name: "nous-hermes-3", provider: "Nous Research (OpenRouter)", strengths: "Spécialisé instruction-following", languageFit: "EN > FR", costPer1k: 0.00020, priority: 10 },
+  { name: "nvidia/nemotron-3-ultra-550b-a55b:free", provider: "NVIDIA (OpenRouter Free)", strengths: "Modèle massif 550B, haute qualité, instruction-following robuste", languageFit: "FR + EN", costPer1k: 0, priority: 1 },
+  { name: "nousresearch/hermes-3-llama-3.1-405b:free", provider: "Nous Research (OpenRouter Free)", strengths: "Llama 3.1 405B, spécialiste instruction-following, multilingue", languageFit: "FR + EN", costPer1k: 0, priority: 2 },
+  { name: "openai/gpt-oss-120b:free", provider: "OpenAI (OpenRouter Free)", strengths: "Open-source 120B, le plus large d'OpenAI, raisonnement approfondi", languageFit: "FR + EN", costPer1k: 0, priority: 3 },
+  { name: "qwen/qwen3-next-80b-a3b-instruct:free", provider: "Alibaba (OpenRouter Free)", strengths: "Qwen3 Next 80B MoE A3B, fort en Asie, excellent multilingue", languageFit: "FR + EN", costPer1k: 0, priority: 4 },
+  { name: "google/gemma-4-31b-it:free", provider: "Google (OpenRouter Free)", strengths: "Gemma 4 31B instruction-tuned, équilibré, bon FR Afrique", languageFit: "FR + EN", costPer1k: 0, priority: 5 },
+  { name: "google/gemma-4-26b-a4b-it:free", provider: "Google (OpenRouter Free)", strengths: "Gemma 4 26B A4B MoE, rapide, bon équilibre qualité/latence", languageFit: "EN > FR", costPer1k: 0, priority: 6 },
+  { name: "openai/gpt-oss-20b:free", provider: "OpenAI (OpenRouter Free)", strengths: "Open-source 20B, latence faible, fiable", languageFit: "EN > FR", costPer1k: 0, priority: 7 },
+  { name: "poolside/laguna-m.1:free", provider: "Poolside (OpenRouter Free)", strengths: "Laguna M.1, optimisé raisonnement structuré", languageFit: "EN", costPer1k: 0, priority: 8 },
+  { name: "poolside/laguna-xs.2:free", provider: "Poolside (OpenRouter Free)", strengths: "Laguna XS.2, ultra-léger, fallback rapide", languageFit: "EN", costPer1k: 0, priority: 9 },
+  { name: "liquid/lfm-2.5-1.2b-thinking:free", provider: "Liquid AI (OpenRouter Free)", strengths: "LFM 2.5 1.2B thinking, ultra-rapide, dernier recours", languageFit: "EN", costPer1k: 0, priority: 10 },
 ];
 
 // Realistic P2P price ranges (June 2026 reference) per USDT

@@ -1198,9 +1198,11 @@ Current price: 1538 NGN per USDT
     <div class="callout-icon">🤖</div>
     <div class="callout-body">
         <strong>Génération automatique :</strong> Ces messages sont rédigés automatiquement
-        par le LLM (round-robin sur 10 modèles : Claude, Gemini, GPT-4o, Llama, Mistral, Qwen,
-        DeepSeek, Phi-4, Gemma, Nous-Hermes). À chaque opportunité éligible détectée, le LLM
-        disponible rédige FR + EN et publie en moins de 60 secondes.
+        par le LLM (round-robin sur 10 modèles gratuits OpenRouter : NVIDIA Nemotron Ultra 550B,
+        Nous Hermes 3 405B, OpenAI GPT-OSS 120B, Qwen3 Next 80B, Google Gemma 4 31B, Gemma 4 26B,
+        GPT-OSS 20B, Poolside Laguna M.1, Laguna XS.2, Liquid LFM 2.5). À chaque opportunité
+        éligible détectée, le LLM disponible rédige FR + EN et publie en moins de 60 secondes.
+        Si un modèle est en rate limit (429), le système bascule automatiquement sur le suivant.
     </div>
 </div>
 
@@ -1303,8 +1305,8 @@ curl <span class="s">"https://api.telegram.org/bot&lt;TON_TOKEN&gt;/getChat?chat
     <div class="env-val">-1001234567891</div>
 </div>
 <div class="env-row">
-    <div class="env-key">ZAI_API_KEY</div>
-    <div class="env-val">zai-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</div>
+    <div class="env-key">OPENROUTER_API_KEY</div>
+    <div class="env-val">sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (clé gratuite — 10 modèles free en rotation)</div>
 </div>
 
 <div class="subheading">Variables optionnelles (recommandées)</div>
@@ -1496,7 +1498,7 @@ Content-Type       : application/json
 <div class="body-text">
     Coche chaque étape au fur et à mesure. Une fois toutes les cases cochées, ton système P2P
     Arbitrage Scout tourne 24/7 sans intervention manuelle, publie automatiquement les
-    opportunités sur les 2 canaux Telegram, et coûte 1-5 $/mois (uniquement les appels LLM).
+    opportunités sur les 2 canaux Telegram, et coûte <strong>0 $/mois</strong> (10 modèles LLM gratuits OpenRouter en rotation).
 </div>
 
 <ul class="checklist">
@@ -1531,7 +1533,9 @@ Content-Type       : application/json
     <li>vercel.json créé avec cron quotidien pour /api/daily-report (8h UTC)</li>
     <li>Idempotence vérifiée (3 triggers parallèles → 1 seul réussit)</li>
     <li>Déduplication 30 min vérifiée (même paire non republicuée)</li>
-    <li>Coût OpenRouter surveillé (alerte à 10 $/mois configurée)</li>
+    <li>Clé OpenRouter gratuite créée + OPENROUTER_API_KEY stockée dans Vercel</li>
+    <li>10 modèles gratuits validés en rotation ( Nemotron, Hermes, GPT-OSS, Qwen3, Gemma4 ×2, Laguna ×2, LFM )</li>
+    <li>Rate limit 429 testé → le système bascule automatiquement sur le modèle suivant</li>
 </ul>
 
 <div class="callout tip">
@@ -1553,7 +1557,7 @@ Content-Type       : application/json
     <div class="ending-subtitle">
         Ton infrastructure P2P Arbitrage Scout est maintenant complète : 2 canaux Telegram SEO,
         pipeline auto-publish LLM, et crons externes redondants. Le système tourne 24/7 pour
-        1-5 $/mois.
+        0 $/mois (10 modèles gratuits OpenRouter).
     </div>
     <div class="ending-stats">
         <div class="ending-stat">
@@ -1565,7 +1569,7 @@ Content-Type       : application/json
             <div class="ending-stat-label">Latence max</div>
         </div>
         <div class="ending-stat">
-            <div class="ending-stat-num">1-5$</div>
+            <div class="ending-stat-num">0$</div>
             <div class="ending-stat-label">Coût/mois</div>
         </div>
     </div>
