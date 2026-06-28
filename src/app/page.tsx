@@ -5,17 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   type Opportunity,
   type Stats,
-  type Platform,
-  type Channel,
-  type LlmModel,
   apiGetStats,
   apiGetOpportunitiesFeed,
-  apiGetPlatforms,
-  apiGetLlms,
   apiGetUserUnlocks,
-  apiGetSeoGuide,
-  apiGetConfigGuide,
-  timeAgo,
 } from "@/lib/types";
 import { toast } from "sonner";
 import { BottomNav, type TabId } from "@/components/p2p/BottomNav";
@@ -23,11 +15,7 @@ import { IntroBanner } from "@/components/p2p/IntroBanner";
 import { LockedOpportunityCard } from "@/components/p2p/LockedOpportunityCard";
 import { UnlockModal } from "@/components/p2p/UnlockModal";
 import { OpportunityDetail } from "@/components/p2p/OpportunityDetail";
-import { ChannelsLlms } from "@/components/p2p/ChannelsLlms";
-import { SeoToolkitSection } from "@/components/p2p/SeoToolkit";
-import { ConfigGuideSection } from "@/components/p2p/ConfigGuide";
-import { Footer } from "@/components/p2p/Footer";
-import { Activity, Star, Unlock, Globe2, Loader2, Sparkles } from "lucide-react";
+import { Star, Unlock, Globe2, Sparkles } from "lucide-react";
 
 interface CurrentUser {
   id: string;
@@ -44,30 +32,21 @@ export default function Home() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [feed, setFeed] = useState<Opportunity[]>([]);
   const [unlocks, setUnlocks] = useState<Opportunity[]>([]);
-  const [platforms, setPlatforms] = useState<Platform[]>([]);
-  const [llms, setLlms] = useState<LlmModel[]>([]);
-  const [channels, setChannels] = useState<Channel[]>([]);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("opportunities");
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
   const [unlockOpp, setUnlockOpp] = useState<Opportunity | null>(null);
-  const [scanning, setScanning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState<"fr" | "en">("fr");
 
   const loadAll = useCallback(async () => {
     try {
-      const [s, f, p, l] = await Promise.all([
+      const [s, f] = await Promise.all([
         apiGetStats(),
         apiGetOpportunitiesFeed({ status: "ACTIVE", limit: "50" }),
-        apiGetPlatforms(),
-        apiGetLlms(),
       ]);
       setStats(s);
       setFeed(f.opportunities);
-      setPlatforms(p.platforms);
-      setLlms(l.llms);
-      setChannels(s.channels);
       if (f.user) {
         setUser(f.user as CurrentUser);
         setLanguage(f.user.language as "fr" | "en");
@@ -111,29 +90,6 @@ export default function Home() {
       } catch {}
     }
   }, []);
-
-  const handleScan = async () => {
-    setScanning(true);
-    try {
-      const res = await fetch("/api/scan", { method: "POST" });
-      const r = await res.json();
-      if (r.ok) {
-        toast.success(
-          language === "fr"
-            ? `Scan terminé en ${(r.durationMs / 1000).toFixed(1)}s — ${r.opportunitiesCreated} opportunité${r.opportunitiesCreated !== 1 ? "s" : ""} créée${r.opportunitiesCreated !== 1 ? "s" : ""}`
-            : `Scan done in ${(r.durationMs / 1000).toFixed(1)}s — ${r.opportunitiesCreated} new opportunit${r.opportunitiesCreated !== 1 ? "ies" : "y"}`,
-          { duration: 5000 }
-        );
-        await loadAll();
-      } else {
-        toast.error(r.error || (language === "fr" ? "Échec du scan" : "Scan failed"));
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Scan error");
-    } finally {
-      setScanning(false);
-    }
-  };
 
   const handleUnlocked = useCallback(async (oppId: string) => {
     setUnlockOpp(null);
@@ -189,19 +145,16 @@ export default function Home() {
               <Globe2 className="h-3 w-3" />
               {isFr ? "🇫🇷 FR" : "🇬🇧 EN"}
             </button>
-            {/* Scan button */}
-            <button
-              onClick={handleScan}
-              disabled={scanning}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-success text-white text-xs font-semibold shadow-glow disabled:opacity-50"
-            >
-              {scanning ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <Activity className="h-3 w-3" />
-              )}
-              {isFr ? "Scanner" : "Scan"}
-            </button>
+            {/* Live indicator (read-only — scans run automatically every 5 min) */}
+            {stats.scannerActive && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#00C48C]/15 border border-[#00C48C]/30">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00C48C] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#00C48C]" />
+                </span>
+                <span className="text-[10px] text-[#00C48C] font-medium">{isFr ? "Live" : "Live"}</span>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -325,7 +278,7 @@ export default function Home() {
             </motion.div>
           )}
 
-          {/* TAB 3: GUIDE */}
+          {/* TAB 3: GUIDE — Comment faire un arbitrage P2P (guide utilisateur) */}
           {activeTab === "guide" && (
             <motion.div
               key="guide"
@@ -334,13 +287,98 @@ export default function Home() {
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
             >
-              <SeoToolkitSection />
-              <ConfigGuideSection />
-              <ChannelsLlms channels={channels} llms={llms} />
+              {/* Intro */}
+              <div className="rounded-2xl gradient-brand-soft border border-white/10 p-5 mb-4">
+                <h2 className="text-lg font-bold text-white mb-2">
+                  {isFr ? "📖 Guide : comment profiter d'une opportunité" : "📖 Guide: how to profit from an opportunity"}
+                </h2>
+                <p className="text-xs text-white/70 leading-relaxed">
+                  {isFr ? (
+                    "L'arbitrage P2P consiste à acheter une crypto moins chère sur une plateforme et la revendre plus chère sur une autre, en gardant la différence. Voici comment faire étape par étape."
+                  ) : (
+                    "P2P arbitrage means buying crypto cheaper on one platform and selling it higher on another, keeping the difference. Here's how to do it step by step."
+                  )}
+                </p>
+              </div>
+
+              {/* Steps */}
+              <div className="space-y-3 mb-4">
+                <GuideStep
+                  num={1}
+                  title={isFr ? "Choisis une opportunité" : "Pick an opportunity"}
+                  desc={isFr
+                    ? "Dans l'onglet Opportunités, choisis une opportunité avec un spread net intéressant (le % en vert). Plus le spread est élevé, plus tu gagnes."
+                    : "In the Opportunities tab, pick an opportunity with an interesting net spread (the green %). Higher spread = more profit."}
+                  color="#00C48C"
+                  isFr={isFr}
+                />
+                <GuideStep
+                  num={2}
+                  title={isFr ? "Débloque avec tes Stars" : "Unlock with Stars"}
+                  desc={isFr
+                    ? "Clique sur 'Débloquer' et paie le prix en Telegram Stars. Tu accèdes immédiatement à tous les détails : vendeurs, prix exacts, calcul du bénéfice."
+                    : "Click 'Unlock' and pay the Telegram Stars price. You immediately get all details: sellers, exact prices, profit calculation."}
+                  color="#F5A623"
+                  isFr={isFr}
+                />
+                <GuideStep
+                  num={3}
+                  title={isFr ? "Achète sur la plateforme 1" : "Buy on platform 1"}
+                  desc={isFr
+                    ? "Ouvre la plateforme d'achat indiquée (ex: Binance P2P). Cherche la paire (ex: USDT/XAF). Choisis le vendeur recommandé. Achète au prix indiqué."
+                    : "Open the buy platform (e.g., Binance P2P). Search for the pair (e.g., USDT/XAF). Pick the recommended seller. Buy at the indicated price."}
+                  color="#00B5A3"
+                  isFr={isFr}
+                />
+                <GuideStep
+                  num={4}
+                  title={isFr ? "Revends sur la plateforme 2" : "Sell on platform 2"}
+                  desc={isFr
+                    ? "Ouvre la plateforme de vente indiquée (ex: Noones). Cherche la même paire. Choisis l'acheteur recommandé. Revends au prix indiqué."
+                    : "Open the sell platform (e.g., Noones). Search for the same pair. Pick the recommended buyer. Sell at the indicated price."}
+                  color="#6C3FC7"
+                  isFr={isFr}
+                />
+                <GuideStep
+                  num={5}
+                  title={isFr ? "Empoche ton bénéfice" : "Pocket your profit"}
+                  desc={isFr
+                    ? "La différence entre le prix d'achat et le prix de vente, moins les frais, est ton bénéfice net. Le guide débloqué te montre le calcul exact."
+                    : "The difference between buy and sell price, minus fees, is your net profit. The unlocked guide shows you the exact calculation."}
+                  color="#00C48C"
+                  isFr={isFr}
+                />
+              </div>
+
+              {/* Tips */}
+              <div className="rounded-2xl bg-[#00C48C]/5 border border-[#00C48C]/30 p-4 mb-4">
+                <h3 className="text-sm font-bold text-[#00C48C] mb-2 flex items-center gap-2">
+                  💡 {isFr ? "Conseils pour réussir" : "Tips for success"}
+                </h3>
+                <ul className="space-y-1.5 text-xs text-white/70">
+                  <li className="flex gap-2"><span className="text-[#00C48C]">✓</span> {isFr ? "Agis vite : les prix changent en quelques minutes" : "Act fast: prices change in minutes"}</li>
+                  <li className="flex gap-2"><span className="text-[#00C48C]">✓</span> {isFr ? "Vérifie toujours le prix avant de confirmer une transaction" : "Always verify the price before confirming a transaction"}</li>
+                  <li className="flex gap-2"><span className="text-[#00C48C]">✓</span> {isFr ? "Choisis des vendeurs avec ≥ 95% de rating et ≥ 100 trades" : "Pick sellers with ≥ 95% rating and ≥ 100 trades"}</li>
+                  <li className="flex gap-2"><span className="text-[#00C48C]">✓</span> {isFr ? "Préfère les stablecoins (USDT) pour éviter la volatilité" : "Prefer stablecoins (USDT) to avoid volatility"}</li>
+                  <li className="flex gap-2"><span className="text-[#00C48C]">✓</span> {isFr ? "Commence avec un petit montant (50-100 USDT) pour tester" : "Start with a small amount (50-100 USDT) to test"}</li>
+                </ul>
+              </div>
+
+              {/* Warning */}
+              <div className="rounded-2xl bg-[#F5A623]/5 border border-[#F5A623]/30 p-4">
+                <h3 className="text-sm font-bold text-[#F5A623] mb-2 flex items-center gap-2">
+                  ⚠️ {isFr ? "Risques à connaître" : "Risks to know"}
+                </h3>
+                <ul className="space-y-1.5 text-xs text-white/70">
+                  <li className="flex gap-2"><span className="text-[#F5A623]">!</span> {isFr ? "Les prix peuvent bouger entre la détection et ton exécution" : "Prices may move between detection and your execution"}</li>
+                  <li className="flex gap-2"><span className="text-[#F5A623]">!</span> {isFr ? "Un vendeur peut annuler la transaction (choisis des vendeurs fiables)" : "A seller may cancel the transaction (pick reliable sellers)"}</li>
+                  <li className="flex gap-2"><span className="text-[#F5A623]">!</span> {isFr ? "Ne mise jamais plus que tu ne peux te permettre de perdre" : "Never bet more than you can afford to lose"}</li>
+                </ul>
+              </div>
             </motion.div>
           )}
 
-          {/* TAB 4: INFO */}
+          {/* TAB 4: INFO — À propos + pricing + disclaimer (sans détails techniques) */}
           {activeTab === "info" && (
             <motion.div
               key="info"
@@ -349,39 +387,38 @@ export default function Home() {
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
             >
+              {/* About */}
               <div className="rounded-2xl gradient-brand-soft border border-white/10 p-6 mb-4 text-center">
                 <div className="text-4xl mb-3" aria-hidden>🔍</div>
                 <h2 className="text-xl font-bold gradient-text mb-2">P2P Arbitrage Scout</h2>
                 <p className="text-xs text-white/60 mb-4">
                   {isFr ? (
-                    "Système mondial de détection d'opportunités d'arbitrage P2P sur 8 plateformes. Signaux FR+EN publiés sur Telegram en moins de 60 secondes."
+                    "Trouve et profite des meilleures opportunités d'arbitrage crypto P2P. Achète bas, vends haut, empoches la différence."
                   ) : (
-                    "Global system detecting P2P arbitrage opportunities across 8 platforms. FR+EN signals published on Telegram in under 60 seconds."
+                    "Find and profit from the best P2P crypto arbitrage opportunities. Buy low, sell high, pocket the difference."
                   )}
                 </p>
-                <div className="grid grid-cols-4 gap-2 text-center">
-                  <div><div className="text-lg font-bold text-[#00C48C]">8</div><div className="text-[9px] text-white/40 uppercase">{isFr ? "Plateformes" : "Platforms"}</div></div>
-                  <div><div className="text-lg font-bold text-[#00B5A3]">10</div><div className="text-[9px] text-white/40 uppercase">LLMs</div></div>
-                  <div><div className="text-lg font-bold text-[#6C3FC7]">2</div><div className="text-[9px] text-white/40 uppercase">{isFr ? "Canaux" : "Channels"}</div></div>
-                  <div><div className="text-lg font-bold text-[#F5A623]">24/7</div><div className="text-[9px] text-white/40 uppercase">{isFr ? "Auto" : "Auto"}</div></div>
-                </div>
               </div>
 
+              {/* How it works (user perspective) */}
               <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-4 mb-4">
-                <h3 className="text-sm font-bold text-white mb-2">{isFr ? "Comment ça marche" : "How it works"}</h3>
+                <h3 className="text-sm font-bold text-white mb-3">{isFr ? "Comment ça marche" : "How it works"}</h3>
                 <ol className="space-y-2 text-xs text-white/70">
-                  <li><strong className="text-[#00B5A3]">1.</strong> {isFr ? "Le scanner détecte les opportunités (spread ≥ 1,5% net) toutes les 5 min" : "Scanner detects opportunities (spread ≥ 1.5% net) every 5 min"}</li>
-                  <li><strong className="text-[#00B5A3]">2.</strong> {isFr ? "Le LLM rédige le guide en FR+EN (10 modèles gratuits en rotation)" : "LLM writes the guide in FR+EN (10 free models in rotation)"}</li>
-                  <li><strong className="text-[#00B5A3]">3.</strong> {isFr ? "Tu vois les opportunités verrouillées dans l'app" : "You see locked opportunities in the app"}</li>
-                  <li><strong className="text-[#00B5A3]">4.</strong> {isFr ? "Tu paies en Telegram Stars pour débloquer les détails" : "Pay with Telegram Stars to unlock details"}</li>
-                  <li><strong className="text-[#00B5A3]">5.</strong> {isFr ? "Tu exécutes l'arbitrage en suivant le guide étape par étape" : "Execute the arbitrage following the step-by-step guide"}</li>
+                  <li className="flex gap-2"><strong className="text-[#00B5A3]">1.</strong> {isFr ? "Notre scanner détecte les opportunités en temps réel" : "Our scanner detects opportunities in real time"}</li>
+                  <li className="flex gap-2"><strong className="text-[#00B5A3]">2.</strong> {isFr ? "Tu vois les opportunités verrouillées avec leur spread" : "You see locked opportunities with their spread"}</li>
+                  <li className="flex gap-2"><strong className="text-[#00B5A3]">3.</strong> {isFr ? "Tu débloques les détails avec tes Telegram Stars" : "You unlock details with your Telegram Stars"}</li>
+                  <li className="flex gap-2"><strong className="text-[#00B5A3]">4.</strong> {isFr ? "Tu suis le guide étape par étape pour profiter de l'opportunité" : "You follow the step-by-step guide to profit"}</li>
                 </ol>
               </div>
 
+              {/* Stars pricing */}
               <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-4 mb-4">
-                <h3 className="text-sm font-bold text-white mb-2">{isFr ? "Tarification Stars" : "Stars pricing"}</h3>
+                <h3 className="text-sm font-bold text-white mb-3">{isFr ? "💰 Tarification Stars" : "💰 Stars pricing"}</h3>
+                <p className="text-[11px] text-white/50 mb-3">
+                  {isFr ? "Le prix dépend du spread : plus l'opportunité est rentable, plus elle coûte en Stars." : "Price depends on spread: the more profitable, the more Stars."}
+                </p>
                 <div className="space-y-1.5 text-xs text-white/70">
-                  <div className="flex justify-between"><span>1.5 - 2.0%</span><span className="text-[#F5A623] font-bold">⭐ 10</span></div>
+                  <div className="flex justify-between"><span>1.5 - 2.0% spread</span><span className="text-[#F5A623] font-bold">⭐ 10</span></div>
                   <div className="flex justify-between"><span>2.0 - 2.5%</span><span className="text-[#F5A623] font-bold">⭐ 15</span></div>
                   <div className="flex justify-between"><span>2.5 - 3.0%</span><span className="text-[#F5A623] font-bold">⭐ 20</span></div>
                   <div className="flex justify-between"><span>3.0 - 3.5%</span><span className="text-[#F5A623] font-bold">⭐ 25</span></div>
@@ -390,30 +427,34 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="rounded-xl bg-[#F5A623]/5 border border-[#F5A623]/30 p-3 mb-4">
+              {/* Get Stars */}
+              <div className="rounded-2xl bg-[#6C3FC7]/5 border border-[#6C3FC7]/30 p-4 mb-4">
+                <h3 className="text-sm font-bold text-[#6C3FC7] mb-2">{isFr ? "⭐ Obtenir des Stars" : "⭐ Get Stars"}</h3>
+                <p className="text-xs text-white/70 mb-2">
+                  {isFr ? "Achète des Stars Telegram directement dans l'app Telegram :" : "Buy Telegram Stars directly in the Telegram app:"}
+                </p>
+                <ol className="space-y-1 text-xs text-white/60">
+                  <li>1. {isFr ? "Ouvre Telegram → Settings → Telegram Stars" : "Open Telegram → Settings → Telegram Stars"}</li>
+                  <li>2. {isFr ? "Choisis un pack (100 Stars ≈ 1.99$)" : "Pick a pack (100 Stars ≈ $1.99)"}</li>
+                  <li>3. {isFr ? "Paie par carte, mobile money ou crypto" : "Pay by card, mobile money or crypto"}</li>
+                </ol>
+              </div>
+
+              {/* Disclaimer */}
+              <div className="rounded-2xl bg-[#F5A623]/5 border border-[#F5A623]/30 p-4">
                 <div className="text-[10px] uppercase tracking-wider text-[#F5A623] font-semibold mb-1">⚠ Disclaimer</div>
                 <p className="text-[11px] text-white/70 leading-relaxed">
                   {isFr ? (
-                    "ℹ️ Information éducative, pas un conseil financier. Les prix P2P peuvent changer entre la détection et l'exécution. Ne misez jamais plus que vous ne pouvez vous permettre de perdre."
+                    "ℹ️ Information éducative, pas un conseil financier. Les prix P2P peuvent changer entre la détection et l'exécution. Ne misez jamais plus que vous ne pouvez vous permettre de perdre. Vérifiez toujours les prix avant d'agir."
                   ) : (
-                    "ℹ️ Educational information, not financial advice. P2P prices may change between detection and execution. Never bet more than you can afford to lose."
+                    "ℹ️ Educational information, not financial advice. P2P prices may change between detection and execution. Never bet more than you can afford to lose. Always verify prices before acting."
                   )}
                 </p>
               </div>
-
-              {stats.lastScan && (
-                <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 text-xs text-white/50">
-                  <div className="flex justify-between"><span>{isFr ? "Dernier scan" : "Last scan"}</span><span>{timeAgo(stats.lastScan.createdAt)}</span></div>
-                  <div className="flex justify-between"><span>{isFr ? "Statut" : "Status"}</span><span className="text-[#00C48C]">{stats.lastScan.status}</span></div>
-                  <div className="flex justify-between"><span>{isFr ? "Opportunités trouvées" : "Found"}</span><span>{stats.lastScan.opportunitiesFound}</span></div>
-                </div>
-              )}
             </motion.div>
           )}
         </AnimatePresence>
       </main>
-
-      <Footer />
 
       {/* Bottom navigation */}
       <BottomNav
@@ -436,6 +477,30 @@ export default function Home() {
         opp={selectedOpp}
         onClose={() => setSelectedOpp(null)}
       />
+    </div>
+  );
+}
+
+// ── GuideStep component (used in Guide tab) ────────────────────
+function GuideStep({ num, title, desc, color, isFr }: {
+  num: number;
+  title: string;
+  desc: string;
+  color: string;
+  isFr: boolean;
+}) {
+  return (
+    <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-4 flex gap-3">
+      <div
+        className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white shrink-0"
+        style={{ background: color }}
+      >
+        {num}
+      </div>
+      <div className="flex-1">
+        <h4 className="text-sm font-bold text-white mb-1">{title}</h4>
+        <p className="text-xs text-white/60 leading-relaxed">{desc}</p>
+      </div>
     </div>
   );
 }
