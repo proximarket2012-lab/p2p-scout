@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>P2P Arbitrage Scout — Logo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+@page { size: 512px 512px; margin: 0; }
+html, body {
+  width: 512px;
+  height: 512px;
+  overflow: hidden;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.logo {
+  position: relative;
+  width: 512px;
+  height: 512px;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(108, 63, 199, 0.5), transparent 65%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(0, 181, 163, 0.4), transparent 65%),
+    linear-gradient(135deg, #0A1628 0%, #0F1F3A 50%, #1B2E5E 100%);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+/* Grid pattern */
+.logo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(108, 63, 199, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(108, 63, 199, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Decorative glows */
+.glow-tl {
+  position: absolute;
+  top: -80px;
+  left: -80px;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(108, 63, 199, 0.6), transparent 70%);
+  border-radius: 50%;
+  filter: blur(30px);
+  pointer-events: none;
+}
+.glow-br {
+  position: absolute;
+  bottom: -80px;
+  right: -80px;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(0, 181, 163, 0.5), transparent 70%);
+  border-radius: 50%;
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+/* Logo mark — magnifying glass with arrow */
+.logo-mark {
+  position: relative;
+  z-index: 2;
+  width: 200px;
+  height: 200px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Outer ring */
+.ring-outer {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 45deg,
+    #6C3FC7 0%,
+    #00B5A3 50%,
+    #6C3FC7 100%
+  );
+  padding: 4px;
+  box-shadow:
+    0 0 40px rgba(108, 63, 199, 0.5),
+    0 0 80px rgba(0, 181, 163, 0.3);
+}
+.ring-outer::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: #0A1628;
+}
+
+/* Inner content */
+.inner {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0F1F3A, #1B2E5E);
+  border: 2px solid rgba(248, 249, 252, 0.08);
+}
+
+/* Magnifying glass emoji-style SVG */
+.magnifier {
+  width: 80px;
+  height: 80px;
+  position: relative;
+}
+.magnifier-lens {
+  width: 56px;
+  height: 56px;
+  border: 5px solid #00B5A3;
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: rgba(0, 181, 163, 0.1);
+  box-shadow:
+    0 0 20px rgba(0, 181, 163, 0.6),
+    inset 0 0 10px rgba(0, 181, 163, 0.3);
+}
+.magnifier-handle {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 28px;
+  height: 5px;
+  background: #00B5A3;
+  border-radius: 3px;
+  transform: rotate(45deg);
+  transform-origin: right center;
+  box-shadow: 0 0 8px rgba(0, 181, 163, 0.5);
+}
+
+/* Upward arrow inside lens (profit/growth symbol) */
+.arrow-up {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 16px solid #00C48C;
+  filter: drop-shadow(0 0 6px rgba(0, 196, 140, 0.8));
+}
+.arrow-up::after {
+  content: '';
+  position: absolute;
+  top: 16px;
+  left: -6px;
+  width: 12px;
+  height: 18px;
+  background: #00C48C;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(0, 196, 140, 0.6);
+}
+
+/* Percent badge */
+.percent-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6C3FC7, #00B5A3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: white;
+  border: 3px solid #0A1628;
+  box-shadow: 0 4px 16px rgba(108, 63, 199, 0.6);
+  z-index: 4;
+}
+
+/* Brand text */
+.brand-text {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  margin-bottom: 6px;
+}
+.brand-name {
+  font-size: 38px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #F8F9FC;
+  margin-bottom: 4px;
+}
+.brand-name .accent {
+  background: linear-gradient(90deg, #6C3FC7 0%, #00B5A3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.brand-tagline {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(248, 249, 252, 0.6);
+  margin-bottom: 16px;
+}
+
+/* Bottom stats row */
+.stats-row {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(248, 249, 252, 0.05);
+  border: 1px solid rgba(248, 249, 252, 0.1);
+  backdrop-filter: blur(8px);
+  min-width: 64px;
+}
+.stat-num {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+}
+.stat-label {
+  font-size: 7px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(248, 249, 252, 0.5);
+  margin-top: 2px;
+}
+.divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(248, 249, 252, 0.15);
+}
+</style>
+</head>
+<body>
+<div class="logo">
+  <div class="glow-tl"></div>
+  <div class="glow-br"></div>
+
+  <!-- Logo mark -->
+  <div class="logo-mark">
+    <div class="ring-outer"></div>
+    <div class="inner">
+      <div class="magnifier">
+        <div class="magnifier-lens">
+          <div class="arrow-up"></div>
+        </div>
+        <div class="magnifier-handle"></div>
+      </div>
+    </div>
+    <div class="percent-badge">%</div>
+  </div>
+
+  <!-- Brand text -->
+  <div class="brand-text">
+    <div class="brand-name">
+      P2P <span class="accent">Scout</span>
+    </div>
+    <div class="brand-tagline">Arbitrage · Crypto · 24/7</div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-num" style="color:#00C48C;">8</div>
+      <div class="stat-label">Plateformes</div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat">
+      <div class="stat-num" style="color:#00B5A3;">10</div>
+      <div class="stat-label">LLMs</div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat">
+      <div class="stat-num" style="color:#6C3FC7;">FR</div>
+      <div class="stat-label">+ EN</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
