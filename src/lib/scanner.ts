@@ -8,6 +8,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { generateBothLanguages, type OpportunityInput } from "@/lib/llm";
 import { publishToBothChannels } from "@/lib/telegram";
+import { calculateStarsPrice } from "@/lib/pricing";
 
 const PRICE_RANGES: Record<string, { min: number; max: number }> = {
   XAF: { min: 595, max: 615 },
@@ -226,6 +227,7 @@ export async function runScan(options?: {
           spreadBrut,
           feesTotal,
           spreadNet,
+          starsPrice: calculateStarsPrice(spreadNet),
           buyMerchant: pick(MERCHANT_NAMES),
           sellMerchant: pick(MERCHANT_NAMES),
           buyMerchantRating: Number(rand(92, 99).toFixed(1)),

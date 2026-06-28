@@ -84,6 +84,7 @@ model Opportunity {
   messageFr         String?
   messageEn         String?
   llmModel          String?
+  starsPrice        Int       @default(25) // Telegram Stars price to unlock (calculated from spread)
   status            String    @default("ACTIVE") // ACTIVE, PUBLISHED, EXPIRED, SUSPICIOUS
   detectedAt        DateTime  @default(now())
   expiresAt         DateTime
@@ -91,9 +92,63 @@ model Opportunity {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
+  unlocks           OpportunityUnlock[]
+
   @@index([status])
   @@index([pair])
   @@index([detectedAt])
+}
+
+// Telegram user (identified from WebApp initData)
+model User {
+  id              String   @id @default(cuid())
+  telegramId      String   @unique
+  username        String?
+  firstName       String?
+  lastName        String?
+  languageCode    String?  // raw Telegram language_code (e.g. "fr", "en")
+  language        String   @default("fr") // normalized: "fr" or "en"
+  isPremium       Boolean  @default(false)
+  starsBalance    Int      @default(0) // internal balance (optional, can also pay directly via invoice)
+  totalUnlocks    Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastSeenAt      DateTime @default(now())
+
+  unlocks         OpportunityUnlock[]
+  transactions    StarsTransaction[]
+}
+
+// Records that a user has paid Stars to unlock an opportunity (visible only to them)
+model OpportunityUnlock {
+  id              String   @id @default(cuid())
+  userId          String
+  opportunityId   String
+  starsPaid       Int
+  telegramChargeId String? // from Telegram payment verification
+  unlockedAt      DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunity     Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, opportunityId])
+  @@index([userId])
+  @@index([opportunityId])
+}
+
+// Stars transactions ledger (purchases + unlocks)
+model StarsTransaction {
+  id              String   @id @default(cuid())
+  userId          String
+  amount          Int // positive = purchase, negative = unlock
+  type            String // "PURCHASE" or "UNLOCK"
+  opportunityId   String?
+  telegramChargeId String?
+  status          String   @default("COMPLETED") // PENDING, COMPLETED, FAILED
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Channel {

@@ -27,6 +27,8 @@ export interface Opportunity {
   messageFr: string | null;
   messageEn: string | null;
   llmModel: string | null;
+  starsPrice?: number;
+  isLocked?: boolean;
   status: OpportunityStatus;
   detectedAt: string;
   expiresAt: string;
@@ -201,6 +203,12 @@ export const apiGetOpportunities = (params: Record<string, string> = {}) => {
   const q = new URLSearchParams(params).toString();
   return api<{ opportunities: Opportunity[]; count: number }>(`/api/opportunities?${q}`);
 };
+export const apiGetOpportunitiesFeed = (params: Record<string, string> = {}) => {
+  const q = new URLSearchParams(params).toString();
+  return api<{ opportunities: Opportunity[]; count: number; user: { id: string; language: string; starsBalance: number; totalUnlocks: number } | null }>(`/api/opportunities/feed?${q}`);
+};
+export const apiGetUserUnlocks = () =>
+  api<{ opportunities: Opportunity[]; count: number; totalUnlocks: number; starsBalance: number }>("/api/user/unlocks");
 export const apiGetOpportunity = (id: string) =>
   api<{ opportunity: Opportunity }>(`/api/opportunities/${id}`);
 export const apiGetPlatforms = () => api<{ platforms: Platform[] }>("/api/platforms");

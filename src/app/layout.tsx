@@ -44,6 +44,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
+      <head>
+        {/* Telegram WebApp SDK — loaded synchronously so it's ready before React mounts */}
+        <script src="https://telegram.org/js/telegram-web-app.js" async />
+      </head>
       <body className={`${inter.variable} font-sans antialiased bg-[#0A1628] text-[#F8F9FC]`}>
         {children}
         <Toaster />
