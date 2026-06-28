@@ -427,3 +427,29 @@ Stage Summary:
   3. Add TELEGRAM_BOT_TOKEN env var (already required by existing telegram.ts)
   4. Wire calculateStarsPrice into scanner.ts to set opportunity.starsPrice at creation time (schema field already exists, default 25)
   5. Production: implement HMAC hash validation in parseTelegramInitData (remove the TODO comment, add crypto.createHmac chain)
+
+---
+Task ID: 14
+Agent: main
+Task: Fix Mini App crash at open — 'Cannot read properties of null (reading starsPrice)'
+
+ROOT CAUSE:
+In UnlockModal.tsx line 31 and LockedOpportunityCard.tsx line 34, starsPrice was computed
+BEFORE the null guard:
+  const starsPrice = (opp as Opportunity & { starsPrice?: number }).starsPrice ?? 25;
+When opp is null (modal closed), (null).starsPrice → TypeError → App crash.
+
+FIXES:
+1. UnlockModal: 'const starsPrice = opp ? (opp.starsPrice ?? 25) : 25;' (ternary)
+2. LockedOpportunityCard: 'const starsPrice = opp.starsPrice ?? 25;' (opp is required prop)
+3. Added ErrorBoundary component (catches future errors, displays stack trace)
+4. Fixed Toaster: was radix-based, switched to sonner (matches toast() imports)
+5. formatPrice() now accepts null → returns '—' instead of crashing
+6. OpportunityDetail: guards against null buyPrice/sellPrice
+7. Telegram SDK: next/script with strategy="beforeInteractive"
+
+VERIFICATION:
+- Agent Browser: app loads, no more 'Application error'
+- VLM: confirms header + hero + opportunity cards visible
+- 26 active opportunities displayed with 'Débloquer' buttons + Stars badges
+- Bottom nav with 4 tabs functional
