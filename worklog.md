@@ -480,3 +480,39 @@ VERIFICATION (with simulated Telegram initData):
 Next: User opens Mini App from @P2PScout2026Bot → Telegram SDK populates
 window.Telegram.WebApp.initData → all API calls include it → user is authenticated
 → 'Mes déblocages' tab shows 'No unlocked opportunities yet' (not 'Connect via Telegram').
+
+---
+Task ID: 17
+Agent: main
+Task: 100% automated marketing system — freemium funnel + LLM CTAs
+
+MARKETING STRATEGY:
+- FREE Telegram channels: low-spread (0.3-1.0%) opportunities with CTA to Mini App
+- MINI APP: high-spread (≥1.5%) opportunities locked behind Stars payment
+- User can 'own' an opportunity by unlocking it (exclusivity + FOMO)
+
+3 MARKETING MESSAGE TYPES (LLM-generated FR+EN):
+1. FREEMIUM_LOW_SPREAD — real opp (≤1%) + CTA "Open Mini App for +5% opportunities"
+2. PREMIUM_TEASER — high-spread opp announced WITHOUT details + "unlock with Stars to own"
+3. VIRAL_HOOK — shareable message every 6h to grow channel
+
+IMPLEMENTATION:
+- New model MarketingCampaign (tracks all marketing messages)
+- New module src/lib/marketing.ts (4 LLM prompts FR+EN, generateMarketingMessage, runMarketingCampaign)
+- Updated scanner.ts: 30% freemium opps + 70% premium, calls runMarketingCampaign after each scan
+- Marketing result included in ScanResult
+
+VERIFICATION:
+- Bot Telegram: @P2PScout2026Bot connected, FR+EN channels set ✓
+- Home page: HTTP 200, loads correctly ✓
+- 39 active opportunities (currently all premium ≥1.5% — freemium will appear on next scans)
+- Scans running every 5 min via external crons ✓
+- LLM rate limits handled gracefully (fallback chain)
+
+AUTOMATION FLOW (100% automated):
+  External cron → /api/scan/trigger → runScan()
+  → detect freemium (30%) + premium (70%) opportunities
+  → auto-publish premium to Mini App (locked behind Stars)
+  → runMarketingCampaign() → LLM generates marketing messages FR+EN
+  → publishToBothChannels() → messages on free Telegram channels
+  → users see low-spread opp + CTA → open Mini App → pay Stars → revenue
