@@ -1,12 +1,13 @@
 // ─────────────────────────────────────────────────────────────
 // P2P Arbitrage Scout — Scanner Engine v2
-// Full automated pipeline: detect → LLM round-robin → write FR+EN → publish → log
+// Full automated pipeline: detect → LLM round-robin → write FR+EN → Telegram publish → log
 // Idempotent (ScanLock + debounce) — safe for distributed external cron triggers
-// Works on Vercel Hobby + Neon Postgres (production) and local SQLite (dev)
+// Works on Vercel Hobby + Neon Postgres (production)
 // ─────────────────────────────────────────────────────────────
 import "server-only";
 import { db } from "@/lib/db";
 import { generateBothLanguages, type OpportunityInput } from "@/lib/llm";
+import { publishToBothChannels } from "@/lib/telegram";
 
 const PRICE_RANGES: Record<string, { min: number; max: number }> = {
   XAF: { min: 595, max: 615 },
@@ -302,25 +303,41 @@ export async function runScan(options?: {
         try {
           const result = await generateBothLanguages(input);
           if (result.fr && result.en) {
-            // IMPORTANT: status stays ACTIVE — an opportunity is active until it expires.
-            // publishedAt + messageFr + messageEn indicate the message has been sent to Telegram.
-            // This keeps published opportunities visible in the Mini App's ACTIVE view.
-            await db.opportunity.update({
-              where: { id: opp.id },
-              data: {
-                messageFr: result.fr,
-                messageEn: result.en,
+            // ── SEND TO TELEGRAM CHANNELS (FR + EN in parallel) ──
+            const tgResult = await publishToBothChannels(result.fr, result.en);
+
+            if (tgResult.fr.ok && tgResult.en.ok) {
+              // Both messages sent successfully — mark as published
+              await db.opportunity.update({
+                where: { id: opp.id },
+                data: {
+                  messageFr: result.fr,
+                  messageEn: result.en,
+                  llmModel: result.llmModel,
+                  publishedAt: new Date(),
+                },
+              });
+              published++;
+              publishedOpps.push({
+                id: opp.id,
+                pair: opp.pair,
+                spreadNet: opp.spreadNet,
                 llmModel: result.llmModel,
-                publishedAt: new Date(),
-              },
-            });
-            published++;
-            publishedOpps.push({
-              id: opp.id,
-              pair: opp.pair,
-              spreadNet: opp.spreadNet,
-              llmModel: result.llmModel,
-            });
+              });
+            } else {
+              // Telegram send failed — save messages but don't mark as published
+              await db.opportunity.update({
+                where: { id: opp.id },
+                data: {
+                  messageFr: result.fr,
+                  messageEn: result.en,
+                  llmModel: result.llmModel,
+                },
+              });
+              const frErr = tgResult.fr.error || "unknown";
+              const enErr = tgResult.en.error || "unknown";
+              errors.push(`Telegram send failed for ${opp.pair}: FR=[${frErr}] EN=[${enErr}]`);
+            }
           } else {
             errors.push(`LLM failed for ${opp.pair} (no content)`);
           }
