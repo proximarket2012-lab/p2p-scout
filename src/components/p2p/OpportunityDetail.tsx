@@ -61,10 +61,13 @@ export function OpportunityDetail({ opp, onClose, onPublished }: OpportunityDeta
 
   if (!opp) return null;
 
-  const usdtBought = investment / opp.buyPrice;
-  const grossSale = usdtBought * opp.sellPrice;
-  const buyFeeAmount = investment * (opp.feesTotal / 100) * (opp.buyPlatform === "Noones" ? 1 : 0); // simplified: fees on Noones side only if applicable
-  const sellFeeAmount = (grossSale - investment) * 0; // simplified for display
+  // Guard against null/locked opportunity data (buyPrice/sellPrice can be null for locked opps from feed)
+  const buyPrice = opp.buyPrice ?? 0;
+  const sellPrice = opp.sellPrice ?? 0;
+  const usdtBought = buyPrice > 0 ? investment / buyPrice : 0;
+  const grossSale = usdtBought * sellPrice;
+  const buyFeeAmount = investment * (opp.feesTotal / 100) * (opp.buyPlatform === "Noones" ? 1 : 0);
+  const sellFeeAmount = (grossSale - investment) * 0;
   const netProfit = grossSale - investment - buyFeeAmount - sellFeeAmount;
   const netPct = (netProfit / investment) * 100;
 

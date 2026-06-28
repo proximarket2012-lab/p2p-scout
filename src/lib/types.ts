@@ -253,7 +253,8 @@ export function timeLeft(expiresAt: string): { minutes: number; color: string; l
   return { minutes, color: "#00C48C", label: `> 15 min` };
 }
 
-export function formatPrice(price: number, fiat: string): string {
+export function formatPrice(price: number | null | undefined, fiat: string): string {
+  if (price == null || isNaN(price)) return "—";
   if (fiat === "EUR" || fiat === "USD" || fiat === "USDT") {
     return price.toFixed(4);
   }

@@ -155,7 +155,7 @@ export function LockedOpportunityCard({
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-white/40">{isFr ? "Vendeur" : "Seller"}</span>
-                <span className="text-white font-medium">{opp.buyMerchant} ({opp.buyMerchantRating}%)</span>
+                <span className="text-white font-medium">{opp.buyMerchant || "—"} ({opp.buyMerchantRating ?? "—"}%)</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-white/40">{isFr ? "Prix achat" : "Buy price"}</span>
@@ -167,7 +167,7 @@ export function LockedOpportunityCard({
               </div>
               <div className="flex justify-between pt-1 border-t border-white/5">
                 <span className="text-white/40">{isFr ? "Volume dispo" : "Volume"}</span>
-                <span className="text-white/80">{opp.volumeAvailable} USDT</span>
+                <span className="text-white/80">{opp.volumeAvailable ?? "—"} USDT</span>
               </div>
             </div>
           </div>

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "sonner";
+import { ErrorBoundary } from "@/components/p2p/ErrorBoundary";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -45,12 +47,27 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
-        {/* Telegram WebApp SDK — loaded synchronously so it's ready before React mounts */}
-        <script src="https://telegram.org/js/telegram-web-app.js" async />
+        {/* Telegram WebApp SDK — beforeInteractive so it's ready before React mounts.
+            In Telegram WebApp context, Telegram injects this; in browser, it loads from CDN. */}
+        <Script
+          src="https://telegram.org/js/telegram-web-app.js"
+          strategy="beforeInteractive"
+        />
       </head>
       <body className={`${inter.variable} font-sans antialiased bg-[#0A1628] text-[#F8F9FC]`}>
-        {children}
-        <Toaster />
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            style: {
+              background: "#0F1F3A",
+              color: "#F8F9FC",
+              border: "1px solid rgba(248, 249, 252, 0.1)",
+            },
+          }}
+        />
       </body>
     </html>
   );
