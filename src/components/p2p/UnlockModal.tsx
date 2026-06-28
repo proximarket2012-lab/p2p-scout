@@ -28,7 +28,8 @@ export function UnlockModal({
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
 
   const isFr = language === "fr";
-  const starsPrice = (opp as Opportunity & { starsPrice?: number }).starsPrice ?? 25;
+  // Guard: opp can be null when modal is closed. Compute starsPrice only if opp exists.
+  const starsPrice = opp ? (opp.starsPrice ?? 25) : 25;
 
   useEffect(() => {
     if (opp) {

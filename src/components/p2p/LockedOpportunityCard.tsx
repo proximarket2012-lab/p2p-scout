@@ -31,7 +31,7 @@ export function LockedOpportunityCard({
 }: LockedOpportunityCardProps) {
   const tl = timeLeft(opp.expiresAt);
   const isFr = language === "fr";
-  const starsPrice = (opp as Opportunity & { starsPrice?: number }).starsPrice ?? 25;
+  const starsPrice = opp.starsPrice ?? 25;
   const isExpired = opp.status === "EXPIRED";
   const isSuspicious = opp.status === "SUSPICIOUS";
 
