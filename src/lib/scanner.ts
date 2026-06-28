@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { generateBothLanguages, type OpportunityInput } from "@/lib/llm";
 import { publishToBothChannels } from "@/lib/telegram";
 import { calculateStarsPrice } from "@/lib/pricing";
+import { runMarketingCampaign } from "@/lib/marketing";
 
 const PRICE_RANGES: Record<string, { min: number; max: number }> = {
   XAF: { min: 595, max: 615 },
@@ -46,6 +47,7 @@ export interface ScanResult {
   durationMs: number;
   errors: string[];
   publishedOpportunities: { id: string; pair: string; spreadNet: number; llmModel: string | null }[];
+  marketing?: { freemiumSent: number; teasersSent: number; viralSent: number } | null;
 }
 
 // ── Distributed lock (works on SQLite + Postgres) ────────────────
@@ -181,9 +183,13 @@ export async function runScan(options?: {
       }
     }
 
-    // 4. Create new opportunities (spread >= 1.5% net)
+    // 4. Create new opportunities — 2 categories:
+    //    a) PREMIUM (spread ≥ 1.5% net) → Mini App, locked behind Stars
+    //    b) FREEMIUM (spread 0.3-1.0% net) → published FREE on Telegram channels as marketing bait
     const numOpps = Math.floor(rand(3, 9));
     const createdIds: string[] = [];
+    const freemiumOpps: OpportunityInput[] = []; // collected for marketing
+    const premiumOpps: OpportunityInput[] = []; // collected for marketing teasers
 
     for (let i = 0; i < numOpps; i++) {
       const pair = pick(pairs);
@@ -200,7 +206,9 @@ export async function runScan(options?: {
       if (sellPlatform.id === buyPlatform.id) continue;
 
       const basePrice = rand(range.min, range.max);
-      const spreadPct = rand(1.6, 4.8);
+      // 70% premium (1.6-4.8%), 30% freemium (0.5-1.2%)
+      const isFreemium = Math.random() < 0.3;
+      const spreadPct = isFreemium ? rand(0.5, 1.2) : rand(1.6, 4.8);
       const buyPrice = Number(basePrice.toFixed(fiat === "EUR" || fiat === "USD" ? 4 : 2));
       const sellPrice = Number((buyPrice * (1 + spreadPct / 100)).toFixed(fiat === "EUR" || fiat === "USD" ? 4 : 2));
 
@@ -208,7 +216,9 @@ export async function runScan(options?: {
       const feesTotal = Number((buyPlatform.feeMaker + sellPlatform.feeMaker).toFixed(2));
       const spreadNet = Number((spreadBrut - feesTotal - 0.2).toFixed(2));
 
-      if (spreadNet < 1.5) continue;
+      // Freemium: keep 0.3-1.0% net. Premium: ≥1.5% net. Skip if in between (1.0-1.5%)
+      if (isFreemium && (spreadNet < 0.3 || spreadNet > 1.0)) continue;
+      if (!isFreemium && spreadNet < 1.5) continue;
 
       const detectedAt = new Date();
       const durationMin = Math.floor(rand(10, 45));
@@ -242,6 +252,33 @@ export async function runScan(options?: {
         },
       });
       createdIds.push(created.id);
+
+      // Collect for marketing (freemium → free channel, premium → teaser)
+      const oppInput: OpportunityInput = {
+        pair: created.pair,
+        fiat: created.fiat,
+        region: created.region,
+        buyPlatform: created.buyPlatform,
+        sellPlatform: created.sellPlatform,
+        buyPrice: created.buyPrice,
+        sellPrice: created.sellPrice,
+        spreadBrut: created.spreadBrut,
+        spreadNet: created.spreadNet,
+        feesTotal: created.feesTotal,
+        buyMerchant: created.buyMerchant,
+        sellMerchant: created.sellMerchant,
+        buyMerchantRating: created.buyMerchantRating,
+        sellMerchantRating: created.sellMerchantRating,
+        buyTrades: created.buyTrades,
+        sellTrades: created.sellTrades,
+        volumeAvailable: created.volumeAvailable,
+        durationMin: created.durationMin,
+      };
+      if (isFreemium) {
+        freemiumOpps.push(oppInput);
+      } else {
+        premiumOpps.push(oppInput);
+      }
     }
 
     // 5. Expire old ACTIVE opportunities (past their expiresAt)
@@ -368,6 +405,30 @@ export async function runScan(options?: {
     // 8. Update last scan timestamp (for debounce)
     await setSetting("last_scan_at", new Date().toISOString());
 
+    // 9. MARKETING CAMPAIGN — send freemium + teaser messages to Telegram channels
+    //    (only if we have freemium or premium opps to promote)
+    let marketingResult: { freemiumSent: number; teasersSent: number; viralSent: number } | null = null;
+    if (freemiumOpps.length > 0 || premiumOpps.length > 0) {
+      try {
+        const botUsername = process.env.BOT_USERNAME || "@P2PScout2026Bot";
+        const botUrl = `https://t.me/${botUsername.replace("@", "")}`;
+        const mResult = await runMarketingCampaign(
+          { freemium: freemiumOpps.slice(0, 1), premium: premiumOpps.slice(0, 1) },
+          botUrl
+        );
+        marketingResult = {
+          freemiumSent: mResult.freemiumSent,
+          teasersSent: mResult.teasersSent,
+          viralSent: mResult.viralSent,
+        };
+        if (mResult.errors.length > 0) {
+          errors.push(...mResult.errors.slice(0, 2));
+        }
+      } catch (err) {
+        errors.push(`Marketing error: ${err instanceof Error ? err.message : "unknown"}`);
+      }
+    }
+
     return {
       success: true,
       platformsChecked: platforms.length,
@@ -379,6 +440,7 @@ export async function runScan(options?: {
       durationMs,
       errors,
       publishedOpportunities: publishedOpps,
+      marketing: marketingResult,
     };
   } finally {
     await releaseLock();

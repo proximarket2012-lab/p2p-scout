@@ -194,3 +194,23 @@ model ScanLock {
   expiresAt   DateTime
   workerId    String?
 }
+
+// Marketing messages sent to free Telegram channels (freemium funnel).
+// These are low-spread (≤1%) opportunities with a powerful CTA to drive
+// users to the Mini App where higher-spread opportunities (≥1.5%) are locked
+// behind Stars payment.
+model MarketingCampaign {
+  id              String   @id @default(cuid())
+  opportunityId   String?
+  type            String   // "FREEMIUM_LOW_SPREAD" | "PREMIUM_TEASER" | "DAILY_TOP" | "VIRAL_HOOK"
+  channelFr       Boolean  @default(true)  // sent to FR channel
+  channelEn       Boolean  @default(true)  // sent to EN channel
+  messageFr       String?
+  messageEn       String?
+  llmModel        String?
+  sentAt          DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([sentAt])
+  @@index([type])
+}
