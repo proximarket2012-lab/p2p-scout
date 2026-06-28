@@ -238,7 +238,7 @@ export default function Home() {
                 <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-8 text-center">
                   <Unlock className="h-10 w-10 text-white/30 mx-auto mb-3" />
                   <p className="text-sm text-white/60 mb-1">{isFr ? "Connecte-toi via Telegram" : "Sign in via Telegram"}</p>
-                  <p className="text-xs text-white/40">{isFr ? "Ouvre la Mini App depuis @P2PScoutBot" : "Open the Mini App from @P2PScoutBot"}</p>
+                  <p className="text-xs text-white/40">{isFr ? "Ouvre la Mini App depuis @P2PScout2026Bot" : "Open the Mini App from @P2PScout2026Bot"}</p>
                 </div>
               ) : unlocks.length === 0 ? (
                 <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-8 text-center">

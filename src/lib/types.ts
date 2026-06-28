@@ -192,8 +192,40 @@ export interface ConfigGuide {
 }
 
 // ── API helpers ─────────────────────────────────────────────────
+
+// Get Telegram WebApp initData from the global window object.
+// In Telegram Mini App context, window.Telegram.WebApp.initData contains
+// the signed user data. We send it as a header so the backend can authenticate.
+function getTelegramInitData(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp;
+    return tg?.initData || null;
+  } catch {
+    return null;
+  }
+}
+
+// Build headers with Telegram initData for authenticated requests
+function getAuthHeaders(): Record<string, string> {
+  const initData = getTelegramInitData();
+  const headers: Record<string, string> = {};
+  if (initData) {
+    headers["X-Telegram-Init-Data"] = initData;
+  }
+  return headers;
+}
+
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, { ...init, cache: "no-store" });
+  const authHeaders = getAuthHeaders();
+  const res = await fetch(url, {
+    ...init,
+    cache: "no-store",
+    headers: {
+      ...(init?.headers as Record<string, string> | undefined),
+      ...authHeaders,
+    },
+  });
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   return res.json() as Promise<T>;
 }

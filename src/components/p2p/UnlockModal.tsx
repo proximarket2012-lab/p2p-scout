@@ -53,8 +53,12 @@ export function UnlockModal({
     setState("creating_invoice");
     setError(null);
     try {
+      // Include Telegram initData for authentication
+      const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp;
+      const initData = tg?.initData;
       const res = await fetch(`/api/opportunities/${opp.id}/invoice`, {
         method: "POST",
+        headers: initData ? { "X-Telegram-Init-Data": initData } : {},
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
@@ -91,9 +95,14 @@ export function UnlockModal({
     setState("verifying");
     setError(null);
     try {
+      const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp;
+      const initData = tg?.initData;
       const res = await fetch("/api/stars/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(initData ? { "X-Telegram-Init-Data": initData } : {}),
+        },
         body: JSON.stringify({ opportunityId: opp.id }),
       });
       const data = await res.json();
