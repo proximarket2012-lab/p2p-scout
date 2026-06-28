@@ -453,3 +453,30 @@ VERIFICATION:
 - VLM: confirms header + hero + opportunity cards visible
 - 26 active opportunities displayed with 'Débloquer' buttons + Stars badges
 - Bottom nav with 4 tabs functional
+
+---
+Task ID: 16
+Agent: main
+Task: Fix 'Connecte-toi via Telegram' bug in Mes déblocages tab
+
+ROOT CAUSE: Frontend never sent window.Telegram.WebApp.initData to backend.
+All API calls (api() helper + direct fetch in UnlockModal) were missing the
+X-Telegram-Init-Data header, so /api/auth/me always returned user=null.
+The 'Mes déblocages' tab checked `if (!user)` and showed the connect prompt
+even when the user was already inside the Telegram Mini App.
+
+FIXES:
+1. src/lib/types.ts: Added getTelegramInitData() + getAuthHeaders() helpers.
+   api() function now injects X-Telegram-Init-Data header on every request.
+2. src/components/p2p/UnlockModal.tsx: handleConfirmUnlock + handleVerifyPayment
+   now include the header (they used raw fetch, not api() helper).
+3. src/app/page.tsx: Fixed bot username @P2PScoutBot → @P2PScout2026Bot.
+
+VERIFICATION (with simulated Telegram initData):
+- /api/auth/me → authenticated: true, user: {Jean Dupont, @jeandupont, fr, premium}
+- /api/opportunities/feed → user: {id, language: fr, starsBalance: 0, totalUnlocks: 0}
+- /api/user/unlocks → count: 0 (no 401 error anymore)
+
+Next: User opens Mini App from @P2PScout2026Bot → Telegram SDK populates
+window.Telegram.WebApp.initData → all API calls include it → user is authenticated
+→ 'Mes déblocages' tab shows 'No unlocked opportunities yet' (not 'Connect via Telegram').
