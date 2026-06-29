@@ -11,9 +11,16 @@ interface TelegramSendResult {
   error?: string;
 }
 
-// Get the Mini App URL from env (default to Vercel deployment)
+// Get the Mini App URL — must be HTTPS for Telegram web_app buttons
 function getMiniAppUrl(): string {
-  return process.env.MINI_APP_URL || process.env.VERCEL_URL || "https://p2p-scout-yt8i.vercel.app";
+  // Priority: MINI_APP_URL env var > hardcoded production URL
+  // Do NOT use VERCEL_URL — it's an internal URL without https:// prefix
+  const url = process.env.MINI_APP_URL || "https://p2p-scout-yt8i.vercel.app";
+  // Ensure it starts with https://
+  if (!url.startsWith("https://")) {
+    return `https://${url.replace(/^https?:\/\//, "")}`;
+  }
+  return url;
 }
 
 // Send a message to a Telegram channel via Bot API
