@@ -184,12 +184,13 @@ export async function runScan(options?: {
     }
 
     // 4. Create new opportunities — 2 categories:
-    //    a) PREMIUM (spread ≥ 1.5% net) → Mini App, locked behind Stars
-    //    b) FREEMIUM (spread 0.3-1.0% net) → published FREE on Telegram channels as marketing bait
+    //    a) PREMIUM (spread ≥ 1.5% net) → saved in DB → Mini App, locked behind Stars
+    //    b) FREEMIUM (spread 0.3-1.0% net) → MEMORY ONLY (NOT saved in DB) → sent to Telegram channels
+    //       Freemium opps NEVER appear in the Mini App. They exist only as marketing messages.
     const numOpps = Math.floor(rand(3, 9));
     const createdIds: string[] = [];
-    const freemiumOpps: OpportunityInput[] = []; // collected for marketing
-    const premiumOpps: OpportunityInput[] = []; // collected for marketing teasers
+    const freemiumOpps: OpportunityInput[] = []; // MEMORY ONLY — for Telegram marketing
+    const premiumOpps: OpportunityInput[] = []; // For teaser marketing
 
     for (let i = 0; i < numOpps; i++) {
       const pair = pick(pairs);
@@ -206,7 +207,7 @@ export async function runScan(options?: {
       if (sellPlatform.id === buyPlatform.id) continue;
 
       const basePrice = rand(range.min, range.max);
-      // 70% premium (1.6-4.8%), 30% freemium (0.5-1.2%)
+      // 30% freemium (0.5-1.2%), 70% premium (1.6-4.8%)
       const isFreemium = Math.random() < 0.3;
       const spreadPct = isFreemium ? rand(0.5, 1.2) : rand(1.6, 4.8);
       const buyPrice = Number(basePrice.toFixed(fiat === "EUR" || fiat === "USD" ? 4 : 2));
@@ -222,61 +223,62 @@ export async function runScan(options?: {
 
       const detectedAt = new Date();
       const durationMin = Math.floor(rand(10, 45));
-      const expiresAt = new Date(detectedAt.getTime() + durationMin * 60 * 1000);
       const isSuspicious = spreadNet > 10;
 
-      const created = await db.opportunity.create({
-        data: {
-          pair: pair.symbol,
-          fiat,
-          region: pair.region,
-          buyPlatform: buyPlatform.name,
-          sellPlatform: sellPlatform.name,
-          buyPrice,
-          sellPrice,
-          spreadBrut,
-          feesTotal,
-          spreadNet,
-          starsPrice: calculateStarsPrice(spreadNet),
-          buyMerchant: pick(MERCHANT_NAMES),
-          sellMerchant: pick(MERCHANT_NAMES),
-          buyMerchantRating: Number(rand(92, 99).toFixed(1)),
-          sellMerchantRating: Number(rand(92, 99).toFixed(1)),
-          buyTrades: Math.floor(rand(50, 2500)),
-          sellTrades: Math.floor(rand(50, 2500)),
-          volumeAvailable: Number(rand(150, 5000).toFixed(0)),
-          durationMin,
-          status: isSuspicious ? "SUSPICIOUS" : "ACTIVE",
-          detectedAt,
-          expiresAt,
-        },
-      });
-      createdIds.push(created.id);
-
-      // Collect for marketing (freemium → free channel, premium → teaser)
+      // Build the opp data (used for both DB insert and marketing)
       const oppInput: OpportunityInput = {
-        pair: created.pair,
-        fiat: created.fiat,
-        region: created.region,
-        buyPlatform: created.buyPlatform,
-        sellPlatform: created.sellPlatform,
-        buyPrice: created.buyPrice,
-        sellPrice: created.sellPrice,
-        spreadBrut: created.spreadBrut,
-        spreadNet: created.spreadNet,
-        feesTotal: created.feesTotal,
-        buyMerchant: created.buyMerchant,
-        sellMerchant: created.sellMerchant,
-        buyMerchantRating: created.buyMerchantRating,
-        sellMerchantRating: created.sellMerchantRating,
-        buyTrades: created.buyTrades,
-        sellTrades: created.sellTrades,
-        volumeAvailable: created.volumeAvailable,
-        durationMin: created.durationMin,
+        pair: pair.symbol,
+        fiat,
+        region: pair.region,
+        buyPlatform: buyPlatform.name,
+        sellPlatform: sellPlatform.name,
+        buyPrice,
+        sellPrice,
+        spreadBrut,
+        spreadNet,
+        feesTotal,
+        buyMerchant: pick(MERCHANT_NAMES),
+        sellMerchant: pick(MERCHANT_NAMES),
+        buyMerchantRating: Number(rand(92, 99).toFixed(1)),
+        sellMerchantRating: Number(rand(92, 99).toFixed(1)),
+        buyTrades: Math.floor(rand(50, 2500)),
+        sellTrades: Math.floor(rand(50, 2500)),
+        volumeAvailable: Number(rand(150, 5000).toFixed(0)),
+        durationMin,
       };
+
       if (isFreemium) {
+        // FREEMIUM: MEMORY ONLY — do NOT save to DB. Will be sent to Telegram channels.
         freemiumOpps.push(oppInput);
       } else {
+        // PREMIUM: save to DB → appears in Mini App, locked behind Stars
+        const created = await db.opportunity.create({
+          data: {
+            pair: oppInput.pair,
+            fiat: oppInput.fiat,
+            region: oppInput.region,
+            buyPlatform: oppInput.buyPlatform,
+            sellPlatform: oppInput.sellPlatform,
+            buyPrice: oppInput.buyPrice,
+            sellPrice: oppInput.sellPrice,
+            spreadBrut: oppInput.spreadBrut,
+            feesTotal: oppInput.feesTotal,
+            spreadNet: oppInput.spreadNet,
+            starsPrice: calculateStarsPrice(oppInput.spreadNet),
+            buyMerchant: oppInput.buyMerchant,
+            sellMerchant: oppInput.sellMerchant,
+            buyMerchantRating: oppInput.buyMerchantRating,
+            sellMerchantRating: oppInput.sellMerchantRating,
+            buyTrades: oppInput.buyTrades,
+            sellTrades: oppInput.sellTrades,
+            volumeAvailable: oppInput.volumeAvailable,
+            durationMin: oppInput.durationMin,
+            status: isSuspicious ? "SUSPICIOUS" : "ACTIVE",
+            detectedAt,
+            expiresAt: new Date(detectedAt.getTime() + durationMin * 60 * 1000),
+          },
+        });
+        createdIds.push(created.id);
         premiumOpps.push(oppInput);
       }
     }
