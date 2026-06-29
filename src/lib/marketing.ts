@@ -12,9 +12,7 @@
 // ─────────────────────────────────────────────────────────────
 import "server-only";
 import { db } from "@/lib/db";
-import { publishToBothChannels, sendTelegramMessage } from "@/lib/telegram";
-import { selectNextLlm, markLlmUsed } from "@/lib/llm";
-import type { OpportunityInput } from "@/lib/llm";
+import { publishToBothChannels } from "@/lib/telegram";
 
 // ── System prompts for marketing messages ──────────────────────
 
@@ -118,7 +116,7 @@ End with: "ℹ️ Educational information, not financial advice."`;
 
 // ── Build user prompts from opportunity data ───────────────────
 
-function buildFreemiumUserPrompt(opp: OpportunityInput, botUrl: string, lang: "FR" | "EN"): string {
+function buildFreemiumUserPrompt(opp: MarketingOppInput, botUrl: string, lang: "FR" | "EN"): string {
   if (lang === "FR") {
     return `Données de l'opportunité (spread faible, publiée GRATUITEMENT) :
 PAIRE : ${opp.pair} (${opp.region})
@@ -137,7 +135,7 @@ BOT URL: ${botUrl}
 Write the freemium EN message following the required structure.`;
 }
 
-function buildTeaserUserPrompt(opp: OpportunityInput, botUrl: string, lang: "FR" | "EN"): string {
+function buildTeaserUserPrompt(opp: MarketingOppInput, botUrl: string, lang: "FR" | "EN"): string {
   if (lang === "FR") {
     return `Opportunité premium (détails cachés) :
 PAIRE : ${opp.pair} (${opp.region})
@@ -177,7 +175,7 @@ Write the viral EN message.`;
 
 async function generateMarketingMessage(
   type: "FREEMIUM_LOW_SPREAD" | "PREMIUM_TEASER" | "VIRAL_HOOK",
-  opp: OpportunityInput | null,
+  opp: MarketingOppInput | null,
   botUrl: string,
   activeCount: number = 0,
   bestSpread: number = 0
@@ -211,67 +209,116 @@ async function generateMarketingMessage(
   };
 }
 
-// Helper: call LLM with a custom system prompt (bypasses the default CDC prompts)
+// ── Types needed locally (avoids importing from llm.ts to prevent circular deps) ──
+interface MarketingOppInput {
+  pair: string;
+  fiat: string;
+  region: string;
+  buyPlatform: string;
+  sellPlatform: string;
+  buyPrice: number;
+  sellPrice: number;
+  spreadBrut: number;
+  spreadNet: number;
+  feesTotal: number;
+  buyMerchant: string;
+  sellMerchant: string;
+  buyMerchantRating: number;
+  sellMerchantRating: number;
+  buyTrades: number;
+  sellTrades: number;
+  volumeAvailable: number;
+  durationMin: number;
+}
+
+// Helper: call LLM with a custom system prompt — fully self-contained (no import from llm.ts)
+// Queries DB directly for LLM rotation + calls OpenRouter API directly.
 async function callLlmWithPrompt(
   systemPrompt: string,
   userPrompt: string
 ): Promise<{ content: string; llmModel: string } | null> {
-  const hasOpenRouter = !!process.env.OPENROUTER_API_KEY;
-  if (!hasOpenRouter) {
-    console.error("[Marketing LLM] OPENROUTER_API_KEY not set — cannot generate marketing message");
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    console.error("[Marketing LLM] OPENROUTER_API_KEY not set");
     return null;
   }
 
-  const skipIds = new Set<string>();
+  // Get next LLM from DB (oldest lastUsedAt, ordered by priority)
+  const llms = await db.llmModel.findMany({
+    where: { enabled: true },
+    orderBy: [{ lastUsedAt: "asc" }, { priority: "asc" }],
+    take: 5, // Get top 5 candidates
+  });
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const nextLlm = await selectNextLlm(skipIds);
-    if (!nextLlm) break;
+  if (llms.length === 0) {
+    console.error("[Marketing LLM] No enabled LLMs in database");
+    return null;
+  }
 
+  for (const llm of llms) {
     try {
-      const apiKey = process.env.OPENROUTER_API_KEY!;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30_000);
-      try {
-        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`,
-            "HTTP-Referer": "https://p2p-arbitrage-scout.vercel.app",
-            "X-Title": "P2P Arbitrage Scout Marketing",
-          },
-          body: JSON.stringify({
-            model: nextLlm.name,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            temperature: 0.8,
-            max_tokens: 800,
-          }),
-          signal: controller.signal,
+
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://p2p-arbitrage-scout.vercel.app",
+          "X-Title": "P2P Arbitrage Scout Marketing",
+        },
+        body: JSON.stringify({
+          model: llm.name,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.8,
+          max_tokens: 800,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (res.status === 429 || res.status === 402) {
+        console.warn(`[Marketing LLM] ${llm.name} rate limited (${res.status})`);
+        // Mark as used so it's skipped next time
+        await db.llmModel.update({
+          where: { id: llm.id },
+          data: { lastUsedAt: new Date(), useCount: { increment: 1 } },
         });
-        clearTimeout(timeout);
-        if (res.status === 429 || res.status === 402) throw new Error(`Rate limit on ${nextLlm.name}`);
-        if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
-        const data = await res.json();
-        const content = data?.choices?.[0]?.message?.content ?? "";
-        if (!content.trim()) throw new Error("Empty response");
-        await markLlmUsed(nextLlm.id);
-        return { content: content.trim(), llmModel: nextLlm.name };
-      } catch (err) {
-        clearTimeout(timeout);
-        throw err;
+        continue;
       }
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        console.warn(`[Marketing LLM] ${llm.name} HTTP ${res.status}: ${errText.slice(0, 100)}`);
+        continue;
+      }
+
+      const data = await res.json();
+      const content = data?.choices?.[0]?.message?.content ?? "";
+      if (!content.trim()) {
+        console.warn(`[Marketing LLM] ${llm.name} returned empty content`);
+        continue;
+      }
+
+      // Success — mark as used
+      await db.llmModel.update({
+        where: { id: llm.id },
+        data: { lastUsedAt: new Date(), useCount: { increment: 1 } },
+      });
+
+      return { content: content.trim(), llmModel: llm.name };
     } catch (err) {
-      console.error(`[Marketing LLM] ${nextLlm.name} failed:`, err);
-      await markLlmUsed(nextLlm.id);
-      skipIds.add(nextLlm.id);
+      console.error(`[Marketing LLM] ${llm.name} error:`, err instanceof Error ? err.message : "unknown");
+      continue;
     }
   }
 
-  console.error("[Marketing LLM] All OpenRouter models failed");
+  console.error("[Marketing LLM] All LLMs failed");
   return null;
 }
 
@@ -286,7 +333,7 @@ export interface MarketingResult {
 }
 
 export async function runMarketingCampaign(
-  opportunities: { freemium: OpportunityInput[]; premium: OpportunityInput[] },
+  opportunities: { freemium: MarketingOppInput[]; premium: MarketingOppInput[] },
   botUrl: string
 ): Promise<MarketingResult> {
   const errors: string[] = [];
