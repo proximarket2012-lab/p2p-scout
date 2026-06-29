@@ -497,12 +497,14 @@ function buildTeaserTemplateEN(opp: MarketingOppInput, botUrl: string): string {
 }
 
 function buildViralTemplateFR(botUrl: string, activeCount: number, bestSpread: number): string {
-  return `🚀 GAGNE SANS TRADER
+  return `🚀 GAGNE SANS TRADER — ET GAGNE EN PARTAGEANT
 
 Des opportunités d'arbitrage crypto détectées automatiquement,
 expliquées simplement, débloquables avec des Stars.
 
 🔥 ${activeCount} opportunités actives · Meilleur spread : +${bestSpread}%
+
+💰 PROGRAMME D'AFFILIATION : Partage ton lien et gagne 10,4% des dépenses de tes filleuls. Chaque fois qu'un ami débloque une opportunité, tu touches ta part.
 
 👉 Partage ce canal à un ami qui veut gagner sans trader
 📲 Ouvre la Mini App : ${botUrl}
@@ -512,12 +514,14 @@ expliquées simplement, débloquables avec des Stars.
 }
 
 function buildViralTemplateEN(botUrl: string, activeCount: number, bestSpread: number): string {
-  return `🚀 EARN WITHOUT TRADING
+  return `🚀 EARN WITHOUT TRADING — AND EARN BY SHARING
 
 Crypto arbitrage opportunities detected automatically,
 explained simply, unlockable with Stars.
 
 🔥 ${activeCount} active opportunities · Best spread: +${bestSpread}%
+
+💰 AFFILIATE PROGRAM: Share your link and earn 10.4% of your referrals' spending. Every time a friend unlocks an opportunity, you get your cut.
 
 👉 Share this channel with a friend who wants to earn without trading
 📲 Open the Mini App: ${botUrl}
