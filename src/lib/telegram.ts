@@ -50,16 +50,18 @@ export async function sendTelegramMessage(
   };
 
   // Add inline keyboard with Mini App button if requested
-  // NOTE: web_app buttons only work in private chats, NOT in channels.
-  // For channels, we use a regular URL button that opens the bot with a
-  // start parameter, which then opens the Mini App via the bot's menu button.
+  // Channels DON'T support web_app buttons — only URL buttons.
+  // We use a t.me/<bot>?start=app URL which opens the bot chat.
+  // The bot's menu button (configured via @BotFather /setmenubutton) opens the Mini App.
+  // So the flow is: channel message → button → bot chat → menu button → Mini App (with initData)
   if (options?.withMiniAppButton) {
-    const miniAppUrl = getMiniAppUrl();
+    const botUsername = process.env.BOT_USERNAME || "P2PScout2026Bot";
+    const cleanUsername = botUsername.replace("@", "");
     body.reply_markup = JSON.stringify({
       inline_keyboard: [[
         {
           text: "🚀 Ouvrir la Mini App",
-          url: miniAppUrl,
+          url: `https://t.me/${cleanUsername}?start=app`,
         },
       ]],
     });
