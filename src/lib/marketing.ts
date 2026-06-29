@@ -12,8 +12,9 @@
 // ─────────────────────────────────────────────────────────────
 import "server-only";
 import { db } from "@/lib/db";
-import { publishToBothChannels } from "@/lib/telegram";
-import { generateBothLanguages, type OpportunityInput } from "@/lib/llm";
+import { publishToBothChannels, sendTelegramMessage } from "@/lib/telegram";
+import { selectNextLlm, markLlmUsed } from "@/lib/llm";
+import type { OpportunityInput } from "@/lib/llm";
 
 // ── System prompts for marketing messages ──────────────────────
 
@@ -215,8 +216,6 @@ async function callLlmWithPrompt(
   systemPrompt: string,
   userPrompt: string
 ): Promise<{ content: string; llmModel: string } | null> {
-  const { selectNextLlm, markLlmUsed } = await import("@/lib/llm");
-
   const hasOpenRouter = !!process.env.OPENROUTER_API_KEY;
   if (!hasOpenRouter) {
     console.error("[Marketing LLM] OPENROUTER_API_KEY not set — cannot generate marketing message");

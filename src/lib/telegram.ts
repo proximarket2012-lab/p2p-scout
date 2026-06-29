@@ -11,11 +11,18 @@ interface TelegramSendResult {
   error?: string;
 }
 
+// Get the Mini App URL from env (default to Vercel deployment)
+function getMiniAppUrl(): string {
+  return process.env.MINI_APP_URL || process.env.VERCEL_URL || "https://p2p-scout-yt8i.vercel.app";
+}
+
 // Send a message to a Telegram channel via Bot API
-// Returns { ok, messageId, error }
+// Options:
+//   - withMiniAppButton: adds an inline keyboard button that opens the Mini App
 export async function sendTelegramMessage(
   chatId: string,
-  text: string
+  text: string,
+  options?: { withMiniAppButton?: boolean }
 ): Promise<TelegramSendResult> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
@@ -28,18 +35,33 @@ export async function sendTelegramMessage(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
 
+  const body: Record<string, unknown> = {
+    chat_id: chatId,
+    text: text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  };
+
+  // Add inline keyboard with Mini App button if requested
+  if (options?.withMiniAppButton) {
+    const miniAppUrl = getMiniAppUrl();
+    body.reply_markup = JSON.stringify({
+      inline_keyboard: [[
+        {
+          text: "🚀 Ouvrir la Mini App",
+          web_app: { url: miniAppUrl },
+        },
+      ]],
+    });
+  }
+
   try {
     const res = await fetch(
       `https://api.telegram.org/bot${botToken}/sendMessage`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: text,
-          parse_mode: "HTML",
-          disable_web_page_preview: true,
-        }),
+        body: JSON.stringify(body),
         signal: controller.signal,
       }
     );
@@ -63,10 +85,11 @@ export async function sendTelegramMessage(
 }
 
 // Publish an opportunity to BOTH channels (FR + EN)
-// Returns { fr, en } with success/error for each
+// Always includes the Mini App quick-access button
 export async function publishToBothChannels(
   messageFr: string,
-  messageEn: string
+  messageEn: string,
+  options?: { withMiniAppButton?: boolean }
 ): Promise<{
   fr: TelegramSendResult;
   en: TelegramSendResult;
@@ -74,10 +97,13 @@ export async function publishToBothChannels(
   const frChatId = process.env.TELEGRAM_CHANNEL_FR_ID;
   const enChatId = process.env.TELEGRAM_CHANNEL_EN_ID;
 
+  // Default: always add the Mini App button
+  const opts = { withMiniAppButton: options?.withMiniAppButton ?? true };
+
   // Send FR + EN in parallel for speed
   const [fr, en] = await Promise.all([
-    sendTelegramMessage(frChatId || "", messageFr),
-    sendTelegramMessage(enChatId || "", messageEn),
+    sendTelegramMessage(frChatId || "", messageFr, opts),
+    sendTelegramMessage(enChatId || "", messageEn, opts),
   ]);
 
   return { fr, en };
