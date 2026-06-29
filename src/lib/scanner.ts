@@ -207,9 +207,14 @@ export async function runScan(options?: {
       if (sellPlatform.id === buyPlatform.id) continue;
 
       const basePrice = rand(range.min, range.max);
-      // 30% freemium (0.5-1.2%), 70% premium (1.6-4.8%)
+      // 30% freemium, 70% premium
       const isFreemium = Math.random() < 0.3;
-      const spreadPct = isFreemium ? rand(0.5, 1.2) : rand(1.6, 4.8);
+      // Freemium target: net spread 0.3-1.0% after fees + buffer
+      // spreadNet = spreadBrut - fees - 0.2
+      // For net 0.3-1.0: spreadBrut = 0.5+fees to 1.2+fees
+      // Fees range 0-0.5%, so spreadBrut = 0.5-1.7 → use rand(0.8, 1.7) for safety
+      // Premium target: net ≥1.5%, spreadBrut = 1.7-5.0
+      const spreadPct = isFreemium ? rand(0.8, 1.7) : rand(1.8, 5.0);
       const buyPrice = Number(basePrice.toFixed(fiat === "EUR" || fiat === "USD" ? 4 : 2));
       const sellPrice = Number((buyPrice * (1 + spreadPct / 100)).toFixed(fiat === "EUR" || fiat === "USD" ? 4 : 2));
 
