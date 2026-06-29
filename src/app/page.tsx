@@ -16,6 +16,7 @@ import { LockedOpportunityCard } from "@/components/p2p/LockedOpportunityCard";
 import { UnlockModal } from "@/components/p2p/UnlockModal";
 import { OpportunityDetail } from "@/components/p2p/OpportunityDetail";
 import { Star, Unlock, Globe2, Sparkles } from "lucide-react";
+import { ReferralSection } from "@/components/p2p/ReferralSection";
 
 interface CurrentUser {
   id: string;
@@ -243,6 +244,26 @@ export default function Home() {
                   ))}
                 </div>
               )}
+
+              {/* Subtle referral nudge (non-spammy, only on opportunities tab) */}
+              {user && (
+                <div className="mt-5 rounded-xl bg-[#F5A623]/5 border border-[#F5A623]/20 p-3 flex items-center gap-3">
+                  <span className="text-xl">💰</span>
+                  <div className="flex-1">
+                    <p className="text-[11px] text-white/70">
+                      {isFr
+                        ? "Gagne 10,4% sur chaque dépense de tes amis"
+                        : "Earn 10.4% on every friend's purchase"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("referral")}
+                    className="text-[11px] font-semibold text-[#F5A623] hover:underline whitespace-nowrap"
+                  >
+                    {isFr ? "Parrainer →" : "Refer →"}
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -296,6 +317,19 @@ export default function Home() {
                   </div>
                 </>
               )}
+            </motion.div>
+          )}
+
+          {/* TAB: REFERRAL — Parrainage */}
+          {activeTab === "referral" && (
+            <motion.div
+              key="referral"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ReferralSection language={language} />
             </motion.div>
           )}
 

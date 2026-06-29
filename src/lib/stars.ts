@@ -205,6 +205,14 @@ export async function processUnlock(params: {
       });
     });
 
+    // 4. Record referral commission (outside transaction — non-critical, don't fail unlock)
+    try {
+      const { recordReferralCommission } = await import("@/lib/referral");
+      await recordReferralCommission(params.userId, params.starsPaid);
+    } catch {
+      // Silent — referral commission is best-effort, don't fail the unlock
+    }
+
     return { ok: true };
   } catch (err) {
     // P2002 = unique constraint violation — concurrent request already

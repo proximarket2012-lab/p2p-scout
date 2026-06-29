@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { LayoutGrid, Unlock, BookOpen, Info } from "lucide-react";
+import { LayoutGrid, Unlock, BookOpen, Info, Gift } from "lucide-react";
 
-export type TabId = "opportunities" | "unlocks" | "guide" | "info";
+export type TabId = "opportunities" | "unlocks" | "guide" | "info" | "referral";
 
 interface BottomNavProps {
   active: TabId;
@@ -14,7 +14,8 @@ interface BottomNavProps {
 
 const TABS: { id: TabId; icon: typeof LayoutGrid; fr: string; en: string }[] = [
   { id: "opportunities", icon: LayoutGrid, fr: "Opportunités", en: "Opportunities" },
-  { id: "unlocks", icon: Unlock, fr: "Mes déblocages", en: "My unlocks" },
+  { id: "unlocks", icon: Unlock, fr: "Débloqués", en: "Unlocks" },
+  { id: "referral", icon: Gift, fr: "Parrainage", en: "Refer" },
   { id: "guide", icon: BookOpen, fr: "Guide", en: "Guide" },
   { id: "info", icon: Info, fr: "Info", en: "Info" },
 ];

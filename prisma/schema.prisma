@@ -214,3 +214,23 @@ model MarketingCampaign {
   @@index([sentAt])
   @@index([type])
 }
+
+// Referral system — tracks who referred whom + commissions earned.
+// Commission rate: 10.4% (Telegram Stars native affiliate program rate).
+// Each user gets a personalized link: t.me/P2PScout2026Bot?start=ref_<telegramId>
+model Referral {
+  id              String   @id @default(cuid())
+  referrerId      String   // User who shared the link (referrer)
+  refereeId       String   // User who clicked and joined (referee)
+  referrerTgId    String   // Telegram ID of referrer (for quick lookup)
+  refereeTgId     String   // Telegram ID of referee
+  status          String   @default("PENDING") // PENDING (signed up), ACTIVE (first purchase), COMPLETED
+  totalCommission Int      @default(0) // total Stars earned by referrer from this referee
+  referredAt      DateTime @default(now())
+  activatedAt     DateTime? // when referee made first Stars purchase
+
+  @@unique([referrerId, refereeId])
+  @@index([referrerId])
+  @@index([refereeId])
+  @@index([referrerTgId])
+}
