@@ -11,7 +11,7 @@ export async function GET(req: Request) {
       return NextResponse.json({
         user: null,
         authenticated: false,
-        message: "Not in Telegram WebApp context. Open via @P2PScoutBot to authenticate.",
+        message: "Not in Telegram WebApp context. Open via @P2PScout2026Bot to authenticate.",
       });
     }
     return NextResponse.json({

@@ -287,105 +287,13 @@ export async function runScan(options?: {
       data: { status: "EXPIRED" },
     });
 
-    // 6. AUTO-PUBLISH PIPELINE (Q1 fix)
-    // Pick top N ACTIVE opportunities (highest spread) that haven't been published yet.
-    // For each: dedup check → LLM generates FR + EN → mark PUBLISHED → log.
+    // 6. AUTO-PUBLISH DISABLED — premium opportunities (≥1.5%) are NO LONGER
+    //    published directly to Telegram channels. Only freemium (≤1%) messages
+    //    go to channels via the marketing system (section 9).
+    //    Premium opportunities stay in the Mini App DB, locked behind Stars.
     let published = 0;
     let skippedDedup = 0;
     const publishedOpps: ScanResult["publishedOpportunities"] = [];
-
-    if (autoPublish && createdIds.length > 0) {
-      const candidates = await db.opportunity.findMany({
-        where: {
-          id: { in: createdIds },
-          status: "ACTIVE",
-          messageFr: null,
-        },
-        orderBy: { spreadNet: "desc" },
-        take: maxPublish,
-      });
-
-      for (const opp of candidates) {
-        // Dedup: skip if a similar opp (same pair + platforms) was published in last 30 min
-        const deduped = await isDeduped({
-          pair: opp.pair,
-          buyPlatform: opp.buyPlatform,
-          sellPlatform: opp.sellPlatform,
-        });
-        if (deduped) {
-          skippedDedup++;
-          continue;
-        }
-
-        // LLM round-robin generates FR then EN (sequential for proper rotation)
-        const input: OpportunityInput = {
-          pair: opp.pair,
-          fiat: opp.fiat,
-          region: opp.region,
-          buyPlatform: opp.buyPlatform,
-          sellPlatform: opp.sellPlatform,
-          buyPrice: opp.buyPrice,
-          sellPrice: opp.sellPrice,
-          spreadBrut: opp.spreadBrut,
-          spreadNet: opp.spreadNet,
-          feesTotal: opp.feesTotal,
-          buyMerchant: opp.buyMerchant,
-          sellMerchant: opp.sellMerchant,
-          buyMerchantRating: opp.buyMerchantRating,
-          sellMerchantRating: opp.sellMerchantRating,
-          buyTrades: opp.buyTrades,
-          sellTrades: opp.sellTrades,
-          volumeAvailable: opp.volumeAvailable,
-          durationMin: opp.durationMin,
-        };
-
-        try {
-          const result = await generateBothLanguages(input);
-          if (result.fr && result.en) {
-            // ── SEND TO TELEGRAM CHANNELS (FR + EN in parallel) ──
-            const tgResult = await publishToBothChannels(result.fr, result.en);
-
-            if (tgResult.fr.ok && tgResult.en.ok) {
-              // Both messages sent successfully — mark as published
-              await db.opportunity.update({
-                where: { id: opp.id },
-                data: {
-                  messageFr: result.fr,
-                  messageEn: result.en,
-                  llmModel: result.llmModel,
-                  publishedAt: new Date(),
-                },
-              });
-              published++;
-              publishedOpps.push({
-                id: opp.id,
-                pair: opp.pair,
-                spreadNet: opp.spreadNet,
-                llmModel: result.llmModel,
-              });
-            } else {
-              // Telegram send failed — save messages but don't mark as published
-              await db.opportunity.update({
-                where: { id: opp.id },
-                data: {
-                  messageFr: result.fr,
-                  messageEn: result.en,
-                  llmModel: result.llmModel,
-                },
-              });
-              const frErr = tgResult.fr.error || "unknown";
-              const enErr = tgResult.en.error || "unknown";
-              errors.push(`Telegram send failed for ${opp.pair}: FR=[${frErr}] EN=[${enErr}]`);
-            }
-          } else {
-            errors.push(`LLM failed for ${opp.pair} (no content)`);
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "Unknown LLM error";
-          errors.push(`LLM error for ${opp.pair}: ${msg}`);
-        }
-      }
-    }
 
     const durationMs = Date.now() - startedAt;
 

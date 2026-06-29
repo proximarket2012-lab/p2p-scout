@@ -196,11 +196,20 @@ export interface ConfigGuide {
 // Get Telegram WebApp initData from the global window object.
 // In Telegram Mini App context, window.Telegram.WebApp.initData contains
 // the signed user data. We send it as a header so the backend can authenticate.
+// IMPORTANT: check for `!== undefined` not truthiness — initData can be a
+// non-empty string that's still valid even if it looks falsy.
 function getTelegramInitData(): string | null {
   if (typeof window === "undefined") return null;
   try {
     const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp;
-    return tg?.initData || null;
+    if (!tg) return null;
+    // initData is a query string like "query_id=...&user=%7B...%7D&auth_date=...&hash=..."
+    // It's always a string in Telegram WebApp context (can be empty if not opened from bot)
+    const initData = tg.initData;
+    if (typeof initData === "string" && initData.length > 0) {
+      return initData;
+    }
+    return null;
   } catch {
     return null;
   }

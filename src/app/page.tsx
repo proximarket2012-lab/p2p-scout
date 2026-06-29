@@ -38,6 +38,7 @@ export default function Home() {
   const [unlockOpp, setUnlockOpp] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState<"fr" | "en">("fr");
+  const [tgReady, setTgReady] = useState(false);
 
   const loadAll = useCallback(async () => {
     try {
@@ -68,28 +69,48 @@ export default function Home() {
     }
   }, [user]);
 
+  // Wait for Telegram WebApp SDK to be available before loading data.
+  // The SDK script (telegram-web-app.js) loads asynchronously, and
+  // window.Telegram.WebApp.initData is needed for authentication.
   useEffect(() => {
+    let attempts = 0;
+    const maxAttempts = 30; // 30 × 100ms = 3s max wait
+
+    const checkTelegram = setInterval(() => {
+      attempts++;
+      const tg = (window as unknown as { Telegram?: { WebApp?: { ready?: () => void; expand?: () => void; setHeaderColor?: (c: string) => void; setBackgroundColor?: (c: string) => void; initData?: string } } }).Telegram?.WebApp;
+
+      if (tg) {
+        // SDK is available — initialize it
+        try {
+          tg.ready?.();
+          tg.expand?.();
+          tg.setHeaderColor?.("#0A1628");
+          tg.setBackgroundColor?.("#0A1628");
+        } catch {}
+        clearInterval(checkTelegram);
+        setTgReady(true);
+      } else if (attempts >= maxAttempts) {
+        // Timeout — SDK not loaded (probably not in Telegram context, e.g. browser preview)
+        clearInterval(checkTelegram);
+        setTgReady(true); // Proceed anyway — user will be anonymous
+      }
+    }, 100);
+
+    return () => clearInterval(checkTelegram);
+  }, []);
+
+  // Load data only AFTER Telegram SDK is ready (so initData is available for auth)
+  useEffect(() => {
+    if (!tgReady) return;
     loadAll();
     const interval = setInterval(loadAll, 60_000);
     return () => clearInterval(interval);
-  }, [loadAll]);
+  }, [tgReady, loadAll]);
 
   useEffect(() => {
     if (user) loadUnlocks();
   }, [user, loadUnlocks]);
-
-  // Set Telegram WebApp theme + BackButton
-  useEffect(() => {
-    const tg = (window as unknown as { Telegram?: { WebApp?: { ready: () => void; expand: () => void; setHeaderColor?: (c: string) => void; setBackgroundColor?: (c: string) => void } } }).Telegram?.WebApp;
-    if (tg) {
-      try {
-        tg.ready();
-        tg.expand();
-        tg.setHeaderColor?.("#0A1628");
-        tg.setBackgroundColor?.("#0A1628");
-      } catch {}
-    }
-  }, []);
 
   const handleUnlocked = useCallback(async (oppId: string) => {
     setUnlockOpp(null);

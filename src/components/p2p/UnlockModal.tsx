@@ -56,9 +56,12 @@ export function UnlockModal({
       // Include Telegram initData for authentication
       const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp;
       const initData = tg?.initData;
+      const authHeaders = (typeof initData === "string" && initData.length > 0)
+        ? { "X-Telegram-Init-Data": initData }
+        : {};
       const res = await fetch(`/api/opportunities/${opp.id}/invoice`, {
         method: "POST",
-        headers: initData ? { "X-Telegram-Init-Data": initData } : {},
+        headers: authHeaders,
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
@@ -72,13 +75,35 @@ export function UnlockModal({
       setInvoiceUrl(data.invoiceUrl);
       setState("waiting_payment");
 
-      // Open Telegram Stars invoice
-      const tg = (window as unknown as { Telegram?: { WebApp?: { openInvoiceLink?: (url: string) => void } } }).Telegram?.WebApp;
-      if (tg?.openInvoiceLink && data.invoiceUrl) {
-        // Telegram WebApp SDK — opens native payment sheet
+      // Open Telegram Stars invoice — use openInvoice (native payment sheet)
+      // NOT openInvoiceLink (which opens a browser tab).
+      // openInvoice(url, callback) — callback receives "paid" | "failed" | "pending" | "cancelled"
+      const tg = (window as unknown as {
+        Telegram?: {
+          WebApp?: {
+            openInvoice?: (url: string, callback?: (status: string) => void) => void;
+            openInvoiceLink?: (url: string) => void;
+          }
+        }
+      }).Telegram?.WebApp;
+
+      if (tg?.openInvoice && data.invoiceUrl) {
+        // Native Telegram Stars payment sheet with auto-verification
+        tg.openInvoice(data.invoiceUrl, (status: string) => {
+          if (status === "paid") {
+            // Payment confirmed by Telegram — automatically verify + unlock
+            handleVerifyPayment();
+          } else if (status === "failed" || status === "cancelled") {
+            setError(isFr ? "Paiement annulé ou échoué" : "Payment cancelled or failed");
+            setState("error");
+          }
+          // "pending" — stay in waiting state
+        });
+      } else if (tg?.openInvoiceLink && data.invoiceUrl) {
+        // Fallback: openInvoiceLink (older SDK version)
         tg.openInvoiceLink(data.invoiceUrl);
       } else {
-        // Fallback: open in new tab (dev mode or non-Telegram context)
+        // Fallback: open in new tab (not in Telegram context — dev mode)
         window.open(data.invoiceUrl, "_blank");
         toast.info(isFr
           ? "Ouvre le lien dans un nouvel onglet pour payer avec tes Stars Telegram"
@@ -97,12 +122,13 @@ export function UnlockModal({
     try {
       const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp;
       const initData = tg?.initData;
+      const authHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      if (typeof initData === "string" && initData.length > 0) {
+        authHeaders["X-Telegram-Init-Data"] = initData;
+      }
       const res = await fetch("/api/stars/verify", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(initData ? { "X-Telegram-Init-Data": initData } : {}),
-        },
+        headers: authHeaders,
         body: JSON.stringify({ opportunityId: opp.id }),
       });
       const data = await res.json();
