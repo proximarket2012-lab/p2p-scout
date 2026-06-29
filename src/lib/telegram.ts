@@ -50,13 +50,16 @@ export async function sendTelegramMessage(
   };
 
   // Add inline keyboard with Mini App button if requested
+  // NOTE: web_app buttons only work in private chats, NOT in channels.
+  // For channels, we use a regular URL button that opens the bot with a
+  // start parameter, which then opens the Mini App via the bot's menu button.
   if (options?.withMiniAppButton) {
     const miniAppUrl = getMiniAppUrl();
     body.reply_markup = JSON.stringify({
       inline_keyboard: [[
         {
           text: "🚀 Ouvrir la Mini App",
-          web_app: { url: miniAppUrl },
+          url: miniAppUrl,
         },
       ]],
     });
