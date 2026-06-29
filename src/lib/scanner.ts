@@ -119,12 +119,14 @@ export async function runScan(options?: {
   autoPublish?: boolean;
   maxPublish?: number;
   workerId?: string;
+  force?: boolean; // bypass debounce (for manual testing)
 }): Promise<ScanResult> {
   const startedAt = Date.now();
   const errors: string[] = [];
   const workerId = options?.workerId || `worker-${Math.random().toString(36).slice(2, 8)}`;
   const autoPublish = options?.autoPublish ?? true;
   const maxPublish = options?.maxPublish ?? 3;
+  const force = options?.force ?? false;
 
   // 1. Acquire distributed lock (idempotency for concurrent external crons)
   const lockAcquired = await acquireLock(workerId);
@@ -145,26 +147,30 @@ export async function runScan(options?: {
     };
   }
 
-  // 2. Debounce check (skip if last scan < 2 min ago — prevents spam from rapid triggers)
-  const lastScanIso = await getSetting("last_scan_at");
-  if (lastScanIso) {
-    const lastScan = new Date(lastScanIso).getTime();
-    if (Date.now() - lastScan < 2 * 60 * 1000) {
-      await releaseLock();
-      return {
-        success: true,
-        skipped: true,
-        reason: "debounced",
-        platformsChecked: 0,
-        platformsFailed: 0,
-        opportunitiesFound: 0,
-        opportunitiesCreated: 0,
-        opportunitiesPublished: 0,
-        opportunitiesSkippedDedup: 0,
-        durationMs: Date.now() - startedAt,
-        errors: [],
-        publishedOpportunities: [],
-      };
+  // 2. Debounce check (skip if last scan < 3 min ago — prevents spam from rapid triggers)
+  //    3 min debounce + 5 min cron interval = scans every 5 min (cron) with 2 min safety margin
+  //    Can be bypassed with force=true (for manual testing)
+  if (!force) {
+    const lastScanIso = await getSetting("last_scan_at");
+    if (lastScanIso) {
+      const lastScan = new Date(lastScanIso).getTime();
+      if (Date.now() - lastScan < 3 * 60 * 1000) {
+        await releaseLock();
+        return {
+          success: true,
+          skipped: true,
+          reason: "debounced",
+          platformsChecked: 0,
+          platformsFailed: 0,
+          opportunitiesFound: 0,
+          opportunitiesCreated: 0,
+          opportunitiesPublished: 0,
+          opportunitiesSkippedDedup: 0,
+          durationMs: Date.now() - startedAt,
+          errors: [],
+          publishedOpportunities: [],
+        };
+      }
     }
   }
 
