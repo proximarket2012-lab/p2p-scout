@@ -341,7 +341,7 @@ export async function runMarketingCampaign(
   let teasersSent = 0;
   let viralSent = 0;
 
-  // Get active count + best spread for viral message context
+  // Get active count + best spread for context
   const activeCount = await db.opportunity.count({ where: { status: "ACTIVE" } });
   const bestOpp = await db.opportunity.findFirst({
     where: { status: "ACTIVE" },
@@ -349,63 +349,58 @@ export async function runMarketingCampaign(
   });
   const bestSpread = bestOpp?.spreadNet ?? 0;
 
-  // 1. Send 1 freemium message (low-spread opportunity with CTA)
+  // 1. Send 1 freemium message — TEMPLATE-BASED (no LLM, instant send)
+  //    This avoids Vercel 60s timeout: 4 LLM calls would take 40-60s alone.
   if (opportunities.freemium.length > 0) {
     const freemiumOpp = opportunities.freemium[0];
     try {
-      const msg = await generateMarketingMessage("FREEMIUM_LOW_SPREAD", freemiumOpp, botUrl, activeCount, bestSpread);
-      if (msg.fr && msg.en) {
-        const tgResult = await publishToBothChannels(msg.fr, msg.en);
-        if (tgResult.fr.ok && tgResult.en.ok) {
-          await db.marketingCampaign.create({
-            data: {
-              type: "FREEMIUM_LOW_SPREAD",
-              messageFr: msg.fr,
-              messageEn: msg.en,
-              llmModel: msg.llmModel,
-            },
-          });
-          freemiumSent++;
-        } else {
-          errors.push(`Freemium Telegram send failed: FR=${tgResult.fr.error} EN=${tgResult.en.error}`);
-        }
+      const msgFr = buildFreemiumTemplateFR(freemiumOpp, botUrl, activeCount, bestSpread);
+      const msgEn = buildFreemiumTemplateEN(freemiumOpp, botUrl, activeCount, bestSpread);
+      const tgResult = await publishToBothChannels(msgFr, msgEn);
+      if (tgResult.fr.ok && tgResult.en.ok) {
+        await db.marketingCampaign.create({
+          data: {
+            type: "FREEMIUM_LOW_SPREAD",
+            messageFr: msgFr,
+            messageEn: msgEn,
+            llmModel: "template",
+          },
+        });
+        freemiumSent++;
       } else {
-        errors.push("Freemium LLM generation failed (no content)");
+        errors.push(`Freemium send failed: FR=${tgResult.fr.error} EN=${tgResult.en.error}`);
       }
     } catch (err) {
       errors.push(`Freemium error: ${err instanceof Error ? err.message : "unknown"}`);
     }
   }
 
-  // 2. Send 1 premium teaser (high-spread opportunity, details hidden)
+  // 2. Send 1 premium teaser — TEMPLATE-BASED (no LLM, instant send)
   if (opportunities.premium.length > 0) {
     const teaserOpp = opportunities.premium[0];
     try {
-      const msg = await generateMarketingMessage("PREMIUM_TEASER", teaserOpp, botUrl, activeCount, bestSpread);
-      if (msg.fr && msg.en) {
-        const tgResult = await publishToBothChannels(msg.fr, msg.en);
-        if (tgResult.fr.ok && tgResult.en.ok) {
-          await db.marketingCampaign.create({
-            data: {
-              type: "PREMIUM_TEASER",
-              messageFr: msg.fr,
-              messageEn: msg.en,
-              llmModel: msg.llmModel,
-            },
-          });
-          teasersSent++;
-        } else {
-          errors.push(`Teaser Telegram send failed: FR=${tgResult.fr.error} EN=${tgResult.en.error}`);
-        }
+      const msgFr = buildTeaserTemplateFR(teaserOpp, botUrl);
+      const msgEn = buildTeaserTemplateEN(teaserOpp, botUrl);
+      const tgResult = await publishToBothChannels(msgFr, msgEn);
+      if (tgResult.fr.ok && tgResult.en.ok) {
+        await db.marketingCampaign.create({
+          data: {
+            type: "PREMIUM_TEASER",
+            messageFr: msgFr,
+            messageEn: msgEn,
+            llmModel: "template",
+          },
+        });
+        teasersSent++;
       } else {
-        errors.push("Teaser LLM generation failed (no content)");
+        errors.push(`Teaser send failed: FR=${tgResult.fr.error} EN=${tgResult.en.error}`);
       }
     } catch (err) {
       errors.push(`Teaser error: ${err instanceof Error ? err.message : "unknown"}`);
     }
   }
 
-  // 3. Send 1 viral hook (every ~6 hours = every ~72 scans at 5min interval)
+  // 3. Send 1 viral hook (every ~6 hours) — TEMPLATE-BASED
   const lastViral = await db.marketingCampaign.findFirst({
     where: { type: "VIRAL_HOOK" },
     orderBy: { sentAt: "desc" },
@@ -413,22 +408,21 @@ export async function runMarketingCampaign(
   const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
   if (!lastViral || lastViral.sentAt < sixHoursAgo) {
     try {
-      const msg = await generateMarketingMessage("VIRAL_HOOK", null, botUrl, activeCount, bestSpread);
-      if (msg.fr && msg.en) {
-        const tgResult = await publishToBothChannels(msg.fr, msg.en);
-        if (tgResult.fr.ok && tgResult.en.ok) {
-          await db.marketingCampaign.create({
-            data: {
-              type: "VIRAL_HOOK",
-              messageFr: msg.fr,
-              messageEn: msg.en,
-              llmModel: msg.llmModel,
-            },
-          });
-          viralSent++;
-        } else {
-          errors.push(`Viral Telegram send failed: FR=${tgResult.fr.error} EN=${tgResult.en.error}`);
-        }
+      const msgFr = buildViralTemplateFR(botUrl, activeCount, bestSpread);
+      const msgEn = buildViralTemplateEN(botUrl, activeCount, bestSpread);
+      const tgResult = await publishToBothChannels(msgFr, msgEn);
+      if (tgResult.fr.ok && tgResult.en.ok) {
+        await db.marketingCampaign.create({
+          data: {
+            type: "VIRAL_HOOK",
+            messageFr: msgFr,
+            messageEn: msgEn,
+            llmModel: "template",
+          },
+        });
+        viralSent++;
+      } else {
+        errors.push(`Viral send failed: FR=${tgResult.fr.error} EN=${tgResult.en.error}`);
       }
     } catch (err) {
       errors.push(`Viral error: ${err instanceof Error ? err.message : "unknown"}`);
@@ -442,4 +436,92 @@ export async function runMarketingCampaign(
     viralSent,
     errors,
   };
+}
+
+// ── Template builders (instant, no LLM) ─────────────────────────
+
+function buildFreemiumTemplateFR(opp: MarketingOppInput, botUrl: string, activeCount: number, bestSpread: number): string {
+  return `🚨 OPPORTUNITÉ GRATUITE : +${opp.spreadNet}% sur ${opp.pair}
+
+📊 Achète sur ${opp.buyPlatform} → Revends sur ${opp.sellPlatform}
+💡 Cette opportunité est RÉELLE mais le gain est modeste.
+
+🔥 Dans la Mini App, ${activeCount} opportunités à +2% jusqu'à +${bestSpread}% t'attendent !
+👉 Débloque celle qui te plaît avec tes ⭐ Stars pour t'en approprier les détails.
+
+📲 Ouvre la Mini App : ${botUrl}
+
+#ArbitrageP2P #CryptoFacile #USDT
+ℹ️ Information éducative, pas un conseil financier.`;
+}
+
+function buildFreemiumTemplateEN(opp: MarketingOppInput, botUrl: string, activeCount: number, bestSpread: number): string {
+  return `🚨 FREE OPPORTUNITY: +${opp.spreadNet}% on ${opp.pair}
+
+📊 Buy on ${opp.buyPlatform} → Sell on ${opp.sellPlatform}
+💡 This opportunity is REAL but the profit is modest.
+
+🔥 In the Mini App, ${activeCount} opportunities at +2% up to +${bestSpread}% await you!
+👉 Unlock the one you like with your ⭐ Stars to own its exclusive details.
+
+📲 Open the Mini App: ${botUrl}
+
+#P2PArbitrage #CryptoProfit #USDT
+ℹ️ Educational information, not financial advice.`;
+}
+
+function buildTeaserTemplateFR(opp: MarketingOppInput, botUrl: string): string {
+  return `🔥 ALERTE : opportunité exceptionnelle détectée !
+
+💥 +${opp.spreadNet}% NET sur ${opp.pair} (${opp.region})
+⏱ Disparait dans ${opp.durationMin} minutes...
+🔒 Détails verrouillés — débloque avec tes ⭐ Stars pour t'en approprier
+
+📲 Ouvre la Mini App maintenant : ${botUrl}
+
+#ArbitrageP2P #CryptoFacile
+ℹ️ Information éducative, pas un conseil financier.`;
+}
+
+function buildTeaserTemplateEN(opp: MarketingOppInput, botUrl: string): string {
+  return `🔥 ALERT: exceptional opportunity detected!
+
+💥 +${opp.spreadNet}% NET on ${opp.pair} (${opp.region})
+⏱ Disappears in ${opp.durationMin} minutes...
+🔒 Details locked — unlock with your ⭐ Stars to own it
+
+📲 Open the Mini App now: ${botUrl}
+
+#P2PArbitrage #CryptoProfit
+ℹ️ Educational information, not financial advice.`;
+}
+
+function buildViralTemplateFR(botUrl: string, activeCount: number, bestSpread: number): string {
+  return `🚀 GAGNE SANS TRADER
+
+Des opportunités d'arbitrage crypto détectées automatiquement,
+expliquées simplement, débloquables avec des Stars.
+
+🔥 ${activeCount} opportunités actives · Meilleur spread : +${bestSpread}%
+
+👉 Partage ce canal à un ami qui veut gagner sans trader
+📲 Ouvre la Mini App : ${botUrl}
+
+#ArbitrageP2P #CryptoFacile #GagnerSansTrader
+ℹ️ Information éducative, pas un conseil financier.`;
+}
+
+function buildViralTemplateEN(botUrl: string, activeCount: number, bestSpread: number): string {
+  return `🚀 EARN WITHOUT TRADING
+
+Crypto arbitrage opportunities detected automatically,
+explained simply, unlockable with Stars.
+
+🔥 ${activeCount} active opportunities · Best spread: +${bestSpread}%
+
+👉 Share this channel with a friend who wants to earn without trading
+📲 Open the Mini App: ${botUrl}
+
+#P2PArbitrage #CryptoProfit #PassiveIncome
+ℹ️ Educational information, not financial advice.`;
 }
