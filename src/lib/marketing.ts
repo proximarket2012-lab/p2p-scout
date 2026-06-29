@@ -215,13 +215,14 @@ async function callLlmWithPrompt(
   systemPrompt: string,
   userPrompt: string
 ): Promise<{ content: string; llmModel: string } | null> {
-  // Use the existing LLM rotation but we need a custom system prompt
-  // We'll reuse generateBothLanguages infrastructure by temporarily
-  // importing the LLM client directly
   const { selectNextLlm, markLlmUsed } = await import("@/lib/llm");
-  const ZAI = (await import("z-ai-web-dev-sdk")).default;
 
   const hasOpenRouter = !!process.env.OPENROUTER_API_KEY;
+  if (!hasOpenRouter) {
+    console.error("[Marketing LLM] OPENROUTER_API_KEY not set — cannot generate marketing message");
+    return null;
+  }
+
   const skipIds = new Set<string>();
 
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -229,56 +230,40 @@ async function callLlmWithPrompt(
     if (!nextLlm) break;
 
     try {
-      if (hasOpenRouter) {
-        const apiKey = process.env.OPENROUTER_API_KEY!;
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30_000);
-        try {
-          const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${apiKey}`,
-              "HTTP-Referer": "https://p2p-arbitrage-scout.vercel.app",
-              "X-Title": "P2P Arbitrage Scout Marketing",
-            },
-            body: JSON.stringify({
-              model: nextLlm.name,
-              messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt },
-              ],
-              temperature: 0.8,
-              max_tokens: 800,
-            }),
-            signal: controller.signal,
-          });
-          clearTimeout(timeout);
-          if (res.status === 429 || res.status === 402) throw new Error(`Rate limit on ${nextLlm.name}`);
-          if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
-          const data = await res.json();
-          const content = data?.choices?.[0]?.message?.content ?? "";
-          if (!content.trim()) throw new Error("Empty response");
-          await markLlmUsed(nextLlm.id);
-          return { content: content.trim(), llmModel: nextLlm.name };
-        } catch (err) {
-          clearTimeout(timeout);
-          throw err;
-        }
-      } else {
-        // ZAI fallback
-        const zai = await ZAI.create();
-        const completion = await zai.chat.completions.create({
-          messages: [
-            { role: "assistant", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          thinking: { type: "disabled" },
+      const apiKey = process.env.OPENROUTER_API_KEY!;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30_000);
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+            "HTTP-Referer": "https://p2p-arbitrage-scout.vercel.app",
+            "X-Title": "P2P Arbitrage Scout Marketing",
+          },
+          body: JSON.stringify({
+            model: nextLlm.name,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            temperature: 0.8,
+            max_tokens: 800,
+          }),
+          signal: controller.signal,
         });
-        const content = completion.choices[0]?.message?.content ?? "";
-        if (!content.trim()) throw new Error("Empty ZAI response");
+        clearTimeout(timeout);
+        if (res.status === 429 || res.status === 402) throw new Error(`Rate limit on ${nextLlm.name}`);
+        if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+        const data = await res.json();
+        const content = data?.choices?.[0]?.message?.content ?? "";
+        if (!content.trim()) throw new Error("Empty response");
         await markLlmUsed(nextLlm.id);
         return { content: content.trim(), llmModel: nextLlm.name };
+      } catch (err) {
+        clearTimeout(timeout);
+        throw err;
       }
     } catch (err) {
       console.error(`[Marketing LLM] ${nextLlm.name} failed:`, err);
@@ -287,21 +272,7 @@ async function callLlmWithPrompt(
     }
   }
 
-  // Final fallback: ZAI without rotation
-  try {
-    const zai = await ZAI.create();
-    const completion = await zai.chat.completions.create({
-      messages: [
-        { role: "assistant", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      thinking: { type: "disabled" },
-    });
-    const content = completion.choices[0]?.message?.content ?? "";
-    if (content.trim()) return { content: content.trim(), llmModel: "zai-fallback" };
-  } catch (err) {
-    console.error("[Marketing LLM] ZAI fallback failed:", err);
-  }
+  console.error("[Marketing LLM] All OpenRouter models failed");
   return null;
 }
 

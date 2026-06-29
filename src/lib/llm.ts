@@ -2,11 +2,9 @@
 // P2P Arbitrage Scout — LLM Engine v2
 // Uses OpenRouter API (10 free models in round-robin rotation)
 // with automatic fallback on rate limits (429) or errors.
-// Falls back to z-ai-web-dev-sdk (ZAI) if OPENROUTER_API_KEY is not set.
 // Backend only — NEVER import this module from client code.
 // ─────────────────────────────────────────────────────────────
 import "server-only";
-import ZAI from "z-ai-web-dev-sdk";
 import { db } from "@/lib/db";
 
 // ── System Prompts (from CDC v1.0 § 4.1) ─────────────────────────
@@ -190,30 +188,10 @@ async function callOpenRouter(
   }
 }
 
-// ── ZAI fallback (used when OPENROUTER_API_KEY is not set) ───────
-async function callZai(
-  systemPrompt: string,
-  userPrompt: string
-): Promise<string> {
-  const zai = await ZAI.create();
-  const completion = await zai.chat.completions.create({
-    messages: [
-      { role: "assistant", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    thinking: { type: "disabled" },
-  });
-  const content = completion.choices[0]?.message?.content ?? "";
-  if (!content || content.trim().length === 0) {
-    throw new Error("Empty ZAI response");
-  }
-  return content.trim();
-}
-
 // ── Generate message (single language) with full fallback chain ─
 // Tries up to 5 LLMs in rotation. On rate limit / error, marks the LLM as used
 // (so it's skipped for the next 5 min) and tries the next one.
-// If OPENROUTER_API_KEY is not set, falls back to ZAI SDK.
+// Requires OPENROUTER_API_KEY env var.
 export async function generateOpportunityMessage(
   opp: OpportunityInput,
   language: "FR" | "EN"
@@ -221,24 +199,9 @@ export async function generateOpportunityMessage(
   const systemPrompt = language === "FR" ? SYSTEM_PROMPT_FR : SYSTEM_PROMPT_EN;
   const userPrompt = buildUserPrompt(opp, language);
 
-  const hasOpenRouter = !!process.env.OPENROUTER_API_KEY;
-
-  // If no OpenRouter key, use ZAI directly (demo/dev mode)
-  if (!hasOpenRouter) {
-    try {
-      const content = await callZai(systemPrompt, userPrompt);
-      // Still rotate the DB counter so the UI shows round-robin activity
-      const nextLlm = await selectNextLlm();
-      if (nextLlm) await markLlmUsed(nextLlm.id);
-      return {
-        content,
-        llmModel: nextLlm?.name ?? "zai-fallback",
-        llmId: nextLlm?.id ?? "zai",
-      };
-    } catch (err) {
-      console.error("[LLM] ZAI fallback failed:", err);
-      return null;
-    }
+  if (!process.env.OPENROUTER_API_KEY) {
+    console.error("[LLM] OPENROUTER_API_KEY not set — cannot generate message");
+    return null;
   }
 
   // OpenRouter mode: try up to 5 models in rotation
@@ -266,15 +229,9 @@ export async function generateOpportunityMessage(
     }
   }
 
-  // All OpenRouter models exhausted — final fallback to ZAI
-  console.warn("[LLM] All OpenRouter models failed, falling back to ZAI");
-  try {
-    const content = await callZai(systemPrompt, userPrompt);
-    return { content, llmModel: "zai-emergency", llmId: "zai" };
-  } catch (err) {
-    console.error("[LLM] ZAI emergency fallback also failed:", err);
-    return null;
-  }
+  // All OpenRouter models exhausted — no ZAI fallback (config file not available on Vercel)
+  console.error("[LLM] All OpenRouter models failed — no fallback available");
+  return null;
 }
 
 // ── Generate both FR + EN (sequential for proper rotation) ───────

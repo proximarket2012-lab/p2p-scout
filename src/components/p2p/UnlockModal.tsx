@@ -49,73 +49,6 @@ export function UnlockModal({
 
   if (!opp) return null;
 
-  const handleConfirmUnlock = async () => {
-    setState("creating_invoice");
-    setError(null);
-    try {
-      // Include Telegram initData for authentication
-      const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram?.WebApp;
-      const initData = tg?.initData;
-      const authHeaders = (typeof initData === "string" && initData.length > 0)
-        ? { "X-Telegram-Init-Data": initData }
-        : {};
-      const res = await fetch(`/api/opportunities/${opp.id}/invoice`, {
-        method: "POST",
-        headers: authHeaders,
-      });
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error || "Failed to create invoice");
-      }
-      if (data.alreadyUnlocked) {
-        setState("success");
-        onUnlocked(opp.id);
-        return;
-      }
-      setInvoiceUrl(data.invoiceUrl);
-      setState("waiting_payment");
-
-      // Open Telegram Stars invoice — use openInvoice (native payment sheet)
-      // NOT openInvoiceLink (which opens a browser tab).
-      // openInvoice(url, callback) — callback receives "paid" | "failed" | "pending" | "cancelled"
-      const tg = (window as unknown as {
-        Telegram?: {
-          WebApp?: {
-            openInvoice?: (url: string, callback?: (status: string) => void) => void;
-            openInvoiceLink?: (url: string) => void;
-          }
-        }
-      }).Telegram?.WebApp;
-
-      if (tg?.openInvoice && data.invoiceUrl) {
-        // Native Telegram Stars payment sheet with auto-verification
-        tg.openInvoice(data.invoiceUrl, (status: string) => {
-          if (status === "paid") {
-            // Payment confirmed by Telegram — automatically verify + unlock
-            handleVerifyPayment();
-          } else if (status === "failed" || status === "cancelled") {
-            setError(isFr ? "Paiement annulé ou échoué" : "Payment cancelled or failed");
-            setState("error");
-          }
-          // "pending" — stay in waiting state
-        });
-      } else if (tg?.openInvoiceLink && data.invoiceUrl) {
-        // Fallback: openInvoiceLink (older SDK version)
-        tg.openInvoiceLink(data.invoiceUrl);
-      } else {
-        // Fallback: open in new tab (not in Telegram context — dev mode)
-        window.open(data.invoiceUrl, "_blank");
-        toast.info(isFr
-          ? "Ouvre le lien dans un nouvel onglet pour payer avec tes Stars Telegram"
-          : "Open the link in a new tab to pay with your Telegram Stars"
-        );
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-      setState("error");
-    }
-  };
-
   const handleVerifyPayment = async () => {
     setState("verifying");
     setError(null);
@@ -138,6 +71,67 @@ export function UnlockModal({
       setState("success");
       onUnlocked(opp.id);
       toast.success(isFr ? "Opportunité débloquée !" : "Opportunity unlocked!");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+      setState("error");
+    }
+  };
+
+  const handleConfirmUnlock = async () => {
+    setState("creating_invoice");
+    setError(null);
+    try {
+      // Single tg reference for both initData + openInvoice
+      const tg = (window as unknown as {
+        Telegram?: {
+          WebApp?: {
+            initData?: string;
+            openInvoice?: (url: string, callback?: (status: string) => void) => void;
+            openInvoiceLink?: (url: string) => void;
+          }
+        }
+      }).Telegram?.WebApp;
+
+      const initData = tg?.initData;
+      const authHeaders = (typeof initData === "string" && initData.length > 0)
+        ? { "X-Telegram-Init-Data": initData }
+        : {};
+
+      const res = await fetch(`/api/opportunities/${opp.id}/invoice`, {
+        method: "POST",
+        headers: authHeaders,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "Failed to create invoice");
+      }
+      if (data.alreadyUnlocked) {
+        setState("success");
+        onUnlocked(opp.id);
+        return;
+      }
+      setInvoiceUrl(data.invoiceUrl);
+      setState("waiting_payment");
+
+      // Open Telegram Stars invoice — use openInvoice (native payment sheet)
+      if (tg?.openInvoice && data.invoiceUrl) {
+        tg.openInvoice(data.invoiceUrl, (status: string) => {
+          if (status === "paid") {
+            handleVerifyPayment();
+          } else if (status === "failed" || status === "cancelled") {
+            setError(isFr ? "Paiement annulé ou échoué" : "Payment cancelled or failed");
+            setState("error");
+          }
+        });
+      } else if (tg?.openInvoiceLink && data.invoiceUrl) {
+        tg.openInvoiceLink(data.invoiceUrl);
+      } else {
+        window.open(data.invoiceUrl, "_blank");
+        toast.info(isFr
+          ? "Ouvre le lien dans un nouvel onglet pour payer avec tes Stars Telegram"
+          : "Open the link in a new tab to pay with your Telegram Stars"
+        );
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
       setState("error");
